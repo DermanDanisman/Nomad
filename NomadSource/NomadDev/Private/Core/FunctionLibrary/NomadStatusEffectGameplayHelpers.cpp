@@ -28,8 +28,9 @@ void UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(ACharacter* Ch
 bool UNomadStatusEffectGameplayHelpers::IsSprintBlocked(ACharacter* Character)
 {
     {
+        static const FGameplayTag SprintBlockTag = FGameplayTag::RequestGameplayTag(TEXT("Status.Block.Sprint"));
         if (!Character) return false;
         auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
-        return (SEManager && SEManager->HasBlockingTag(FGameplayTag::RequestGameplayTag(TEXT("Status.Block.Sprint"))));
+        return (SEManager && SEManager->HasBlockingTag(SprintBlockTag));
     }
 }

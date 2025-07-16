@@ -5,6 +5,7 @@
 #include "ARSStatisticsComponent.h"
 #include "Core/Component/NomadAfflictionComponent.h"
 #include "Core/Debug/NomadLogCategories.h"
+#include "Core/FunctionLibrary/NomadStatusEffectGameplayHelpers.h"
 #include "Core/StatusEffect/NomadBaseStatusEffect.h"
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
 #include "GameFramework/Character.h"
@@ -318,17 +319,6 @@ UNomadSurvivalNeedsComponent::FCachedStatValues UNomadSurvivalNeedsComponent::Ge
     return Values;
 }
 
-bool UNomadSurvivalNeedsComponent::ShouldSlowMovement(const FCachedStatValues& Values) const
-{
-    // Early exit if data is invalid or config is missing
-    if (!Values.bValid || !GetConfig()) return false;
-    
-    // Check if either hunger or thirst is low enough to warrant movement penalty
-    // Movement slowing occurs at warning thresholds, not just at critical (0) levels
-    return Values.Hunger <= GetConfig()->GetStarvationWarningThreshold() || 
-           Values.Thirst <= GetConfig()->GetDehydrationWarningThreshold();
-}
-
 float UNomadSurvivalNeedsComponent::ComputeNormalizedTemperature(const float InRawTemperature, const bool bIsWarmBar) const
 {
     // Early exit if config is missing
@@ -504,42 +494,128 @@ void UNomadSurvivalNeedsComponent::EvaluateSurvivalStateTransitions(const FCache
     // This prevents duplicate warnings while allowing periodic reminders with escalation
 }
 
+bool UNomadSurvivalNeedsComponent::ShouldSlowMovement(const FCachedStatValues& Values) const
+{
+    // Early exit if data is invalid or config is missing
+    if (!Values.bValid || !GetConfig()) return false;
+    
+    // Check if either hunger or thirst is low enough to warrant movement penalty
+    // Movement slowing occurs at warning thresholds, not just at critical (0) levels
+    return Values.Hunger <= GetConfig()->GetHungerSlowThreshold() || 
+           Values.Thirst <= GetConfig()->GetThirstSlowThreshold();
+}
+
 void UNomadSurvivalNeedsComponent::EvaluateMovementSlowState(const FCachedStatValues& CachedValues)
 {
-    // Early exit if cached values are invalid
+    // Early exit if cached values are invalid (missing stats, config, etc.)
     if (!CachedValues.bValid) return;
-    
-    // Determine if player should have slowed movement based on current survival needs
+
+    // Check if movement should be slowed based on hunger/thirst thresholds
     const bool bShouldSlow = ShouldSlowMovement(CachedValues);
-    
-    // Check for transition from normal to slowed movement
+
+    // Get movement and stamina cap multipliers from config (default to 1.0, meaning no penalty)
+    float SpeedMultiplier = 1.0f;
+    float StaminaCapMultiplier = 1.0f;
+
+    // If hunger is below or equal to the movement slow threshold, use hunger multipliers
+    if (CachedValues.Hunger <= GetConfig()->GetHungerSlowThreshold())
+    {
+        SpeedMultiplier = GetConfig()->GetHungerSpeedMultiplier();           // Movement speed penalty
+        StaminaCapMultiplier = GetConfig()->GetHungerStaminaCapMultiplier(); // Stamina cap penalty
+    }
+    // If thirst is below or equal to the movement slow threshold, use the lower of the multipliers
+    if (CachedValues.Thirst <= GetConfig()->GetThirstSlowThreshold())
+    {
+        // Use the "worst case" (lowest) multiplier for stacking penalties
+        SpeedMultiplier = FMath::Min(SpeedMultiplier, GetConfig()->GetThirstSpeedMultiplier());
+        StaminaCapMultiplier = FMath::Min(StaminaCapMultiplier, GetConfig()->GetThirstStaminaCapMultiplier());
+    }
+
+    // Use static GUIDs for modifiers so we can reliably remove them later
+    static FGuid MovementSlowGuid = FGuid::NewGuid();
+    static FGuid StaminaCapGuid = FGuid::NewGuid();
+
+    // Transition: If we should slow movement and we're not already slowed
     if (bShouldSlow && !bMovementSlowed)
     {
         bMovementSlowed = true;
-        
-        // Determine what caused the slow (prioritize starvation/dehydration over warning states)
-        // This prioritization ensures the most severe condition is reported as the cause
+
+        // Create a movement speed modifier (multiplicative)
+        FAttributesSetModifier MoveSpeedModifier;
+        MoveSpeedModifier.Guid = MovementSlowGuid;
+        MoveSpeedModifier.StatisticsMod.Add(
+            FStatisticsModifier(
+                FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed")),
+                EModifierType::EMultiplicative,
+                SpeedMultiplier, // e.g., 0.5 for 50% speed
+                1.0f             // No regen change
+            )
+        );
+
+        // Create a stamina cap modifier (multiplicative)
+        FAttributesSetModifier StaminaCapModifier;
+        StaminaCapModifier.Guid = StaminaCapGuid;
+        StaminaCapModifier.StatisticsMod.Add(
+            FStatisticsModifier(
+                FGameplayTag::RequestGameplayTag(TEXT("RPG.Statistics.Stamina")),
+                EModifierType::EMultiplicative,
+                StaminaCapMultiplier, // e.g., 0.8 for 80% cap
+                1.0f                  // No regen change
+            )
+        );
+
+        // Apply the attribute set modifiers to the stats component
+        UARSStatisticsComponent* StatsComp = GetOwner()->FindComponentByClass<UARSStatisticsComponent>();
+        if (StatsComp)
+        {
+            // Add movement speed penalty
+            StatsComp->AddAttributeSetModifier(MoveSpeedModifier);
+            // Add stamina cap penalty
+            StatsComp->AddAttributeSetModifier(StaminaCapModifier);
+
+            // Sync movement speed so CharacterMovementComponent is updated
+            UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(Cast<ACharacter>(GetOwner()));
+        }
+
+        // Determine cause of slow for delegate broadcast (for UI/logic)
         FName SlowCause = IsStarving(CachedValues.Hunger) ? FName(TEXT("Hunger"))
                           : IsDehydrated(CachedValues.Thirst) ? FName(TEXT("Thirst"))
                           : IsHungry(CachedValues.Hunger) ? FName(TEXT("Hunger"))
                           : FName(TEXT("Thirst"));
-        
-        // Pass the relevant stat value that triggered the slowdown for UI display
+
+        // Pass stat value at time of slowdown for UI display
         const float StatValueAtSlow = (SlowCause == FName("Hunger")) ? CachedValues.Hunger : CachedValues.Thirst;
-        
-        // Broadcast event so movement systems can apply actual speed penalties
-        // This component only manages state - actual movement modification happens elsewhere
+
+        // Broadcast event to movement system/UI (actual movement change happens elsewhere)
         OnMovementSlowed.Broadcast(SlowCause, StatValueAtSlow);
     }
-    // Check for recovery from slowed movement back to normal speed
+    // Transition: If we should NOT slow movement and we're currently slowed (recover)
     else if (!bShouldSlow && bMovementSlowed)
     {
         bMovementSlowed = false;
-        
-        // Use the higher of hunger/thirst as the recovery value (indicates best current condition)
+
+        // Remove attribute set modifiers by GUID to restore original values
+        UARSStatisticsComponent* StatsComp = GetOwner()->FindComponentByClass<UARSStatisticsComponent>();
+        if (StatsComp)
+        {
+            // Remove movement speed penalty
+            FAttributesSetModifier MoveSpeedModifier;
+            MoveSpeedModifier.Guid = MovementSlowGuid;
+            StatsComp->RemoveAttributeSetModifier(MoveSpeedModifier);
+
+            // Remove stamina cap penalty
+            FAttributesSetModifier StaminaCapModifier;
+            StaminaCapModifier.Guid = StaminaCapGuid;
+            StatsComp->RemoveAttributeSetModifier(StaminaCapModifier);
+
+            // Sync movement speed so CharacterMovementComponent is updated
+            UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(Cast<ACharacter>(GetOwner()));
+        }
+
+        // Get stat value at recovery (highest of hunger/thirst)
         const float StatValueAtRecover = FMath::Max(CachedValues.Hunger, CachedValues.Thirst);
-        
-        // Broadcast recovery event so movement systems can restore normal speed
+
+        // Broadcast event to movement system/UI (for restoring movement)
         OnMovementRecovered.Broadcast(StatValueAtRecover);
     }
 }

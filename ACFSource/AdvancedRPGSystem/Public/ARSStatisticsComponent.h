@@ -295,6 +295,9 @@ public:
         return baseAttributeSet;
     };
 
+    UFUNCTION(BlueprintCallable, Category = ARS)
+    float GetBaseAttributeValue(FGameplayTag attributeTag) const;
+
     /*Adds a Modifier for the current AttributeSet of the character for a limited amount of time*/
     UFUNCTION(Server, Reliable, BlueprintCallable, Category = ARS)
     void AddTimedAttributeSetModifier(const FAttributesSetModifier& _modifier, float duration);

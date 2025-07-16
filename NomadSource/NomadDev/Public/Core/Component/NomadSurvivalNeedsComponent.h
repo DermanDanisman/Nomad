@@ -485,7 +485,15 @@ private:
     /** Updates and returns cached stat values to avoid redundant component calls */
     FCachedStatValues GetCachedStatValues() const;
     
-    /** Returns true if player should have slowed movement based on cached values */
+    /**
+     * Checks if movement should be slowed due to low hunger or thirst.
+     * 
+     * Movement penalties are applied when hunger or thirst drops to or below their respective slow thresholds,
+     * not just at critical depletion. This allows for early UI/feedback and gameplay cues at warning levels.
+     *
+     * @param Values - Cached stat values (hunger, thirst, etc.)
+     * @return true if movement should be slowed, false otherwise.
+     */
     bool ShouldSlowMovement(const FCachedStatValues& Values) const;
 
     // Simulation helpers (all called from OnMinuteTick):

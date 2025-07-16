@@ -18,6 +18,7 @@ UENUM(BlueprintType)
 enum class EModifierType : uint8 {
     EAdditive = 0 UMETA(DisplayName = "Additive"),
     EPercentage UMETA(DisplayName = "Percentage"),
+    EMultiplicative UMETA(DisplayName = "Multiplicative") // <-- NEW
 };
 
 UENUM(BlueprintType)

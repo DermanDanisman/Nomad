@@ -132,6 +132,63 @@ void UARSStatisticsComponent::GenerateStats()
     CalcualtePrimaryStats();
     GenerateSecondaryStat();
 
+    // --- MULTIPLICATIVE MODIFIER LOGIC ---
+    // Statistics (MaxValue and RegenValue)
+    for (FStatistic& stat : AttributeSet.Statistics)
+    {
+        float MaxMult = 1.0f;
+        float RegenMult = 1.0f;
+        for (const FAttributesSetModifier& attModifier : activeModifiers)
+        {
+            for (const auto& mod : attModifier.StatisticsMod)
+            {
+                if (mod.AttributeType == stat.StatType && mod.ModType == EModifierType::EMultiplicative)
+                {
+                    MaxMult *= mod.MaxValue;       // e.g. 0.5 for 50% cap
+                    RegenMult *= mod.RegenValue;   // e.g. 1.0 to leave unchanged
+                }
+            }
+        }
+        stat.MaxValue *= MaxMult;
+        stat.RegenValue *= RegenMult;
+        stat.CurrentValue = FMath::Min(stat.CurrentValue, stat.MaxValue);
+    }
+
+    // Primary Attributes
+    for (FAttribute& attr : AttributeSet.Attributes)
+    {
+        float AttrMult = 1.0f;
+        for (const FAttributesSetModifier& attModifier : activeModifiers)
+        {
+            for (const auto& mod : attModifier.PrimaryAttributesMod)
+            {
+                if (mod.AttributeType == attr.AttributeType && mod.ModType == EModifierType::EMultiplicative)
+                {
+                    AttrMult *= mod.Value;
+                }
+            }
+        }
+        attr.Value *= AttrMult;
+    }
+
+    // Secondary Attributes
+    for (FAttribute& param : AttributeSet.Parameters)
+    {
+        float ParamMult = 1.0f;
+        for (const FAttributesSetModifier& attModifier : activeModifiers)
+        {
+            for (const auto& mod : attModifier.AttributesMod)
+            {
+                if (mod.AttributeType == param.AttributeType && mod.ModType == EModifierType::EMultiplicative)
+                {
+                    ParamMult *= mod.Value;
+                }
+            }
+        }
+        param.Value *= ParamMult;
+    }
+    // --- END MULTIPLICATIVE MODIFIER LOGIC ---
+
     for (FStatistic& stat : AttributeSet.Statistics)
     {
         FStatistic* oldStat = currentValuesCopy.FindByKey(stat);
@@ -697,6 +754,27 @@ float UARSStatisticsComponent::GetCurrentAttributeValue(FGameplayTag attributeTa
 FAttributesSet UARSStatisticsComponent::GetCurrentAttributeSet() const
 {
     return AttributeSet;
+}
+
+float UARSStatisticsComponent::GetBaseAttributeValue(FGameplayTag attributeTag) const
+{
+    // First, check primary attributes
+    const FAttribute* primary = baseAttributeSet.Attributes.FindByKey(attributeTag);
+    if (primary)
+        return primary->Value;
+
+    // Next, check secondary attributes
+    const FAttribute* secondary = baseAttributeSet.Parameters.FindByKey(attributeTag);
+    if (secondary)
+        return secondary->Value;
+
+    // Finally, check statistics
+    const FStatistic* stat = baseAttributeSet.Statistics.FindByKey(attributeTag);
+    if (stat)
+        return stat->MaxValue;
+
+    // Not found
+    return 0.f;
 }
 
 int32 UARSStatisticsComponent::GetExpOnDeath() const

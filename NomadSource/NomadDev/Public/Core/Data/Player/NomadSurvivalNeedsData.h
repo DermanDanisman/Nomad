@@ -320,7 +320,7 @@ public:
      * Raise for more warning, lower for more risk.
      */
     UPROPERTY(EditAnywhere, Category="SideEffects|Thresholds", meta=(ClampMin="0"))
-    float HungerSlowThreshold = 20.f;
+    float HungerSlowThreshold = 50.f;
 
     /**
      * Movement speed multiplier when slowed by hunger (0 = stopped, 1 = unaffected).
@@ -330,11 +330,18 @@ public:
     float HungerSpeedMultiplier = 0.5f;
 
     /**
+     * Stamina cap multiplier applied when Hunger is below slow threshold.
+     * 1.0 = no change, 0.8 = 80% cap, etc.
+     */
+    UPROPERTY(EditAnywhere, Category="SideEffects|Multipliers", meta=(ClampMin="0", ClampMax="1"))
+    float HungerStaminaCapMultiplier = 0.8f;
+
+    /**
      * Thirst at/below which movement slows and health may be lost.
      * Raise for more warning, lower for more risk.
      */
     UPROPERTY(EditAnywhere, Category="SideEffects|Thresholds", meta=(ClampMin="0"))
-    float ThirstSlowThreshold = 20.f;
+    float ThirstSlowThreshold = 50.f;
 
     /**
      * Movement speed multiplier when slowed by thirst (0 = stopped, 1 = unaffected).
@@ -342,6 +349,13 @@ public:
      */
     UPROPERTY(EditAnywhere, Category="SideEffects|Multipliers", meta=(ClampMin="0", ClampMax="1"))
     float ThirstSpeedMultiplier = 0.5f;
+
+    /**
+     * Stamina cap multiplier applied when Thirst is below slow threshold.
+     * 1.0 = no change, 0.8 = 80% cap, etc.
+     */
+    UPROPERTY(EditAnywhere, Category="SideEffects|Multipliers", meta=(ClampMin="0", ClampMax="1"))
+    float ThirstStaminaCapMultiplier = 0.8f;
 
     // =========================
     // [Warning Thresholds]
@@ -530,9 +544,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category="SideEffects|Thresholds") float GetHungerSlowThreshold() const { return HungerSlowThreshold; }
     UFUNCTION(BlueprintPure, Category="SideEffects|Thresholds") float GetThirstSlowThreshold() const { return ThirstSlowThreshold; }
+    
+    UFUNCTION(BlueprintPure, Category="SideEffects|Multipliers") float GetHungerStaminaCapMultiplier() const { return HungerStaminaCapMultiplier; }
     UFUNCTION(BlueprintPure, Category="SideEffects|Multipliers") float GetHungerSpeedMultiplier() const { return HungerSpeedMultiplier; }
     UFUNCTION(BlueprintPure, Category="SideEffects|Multipliers") float GetThirstSpeedMultiplier() const { return ThirstSpeedMultiplier; }
-
+    UFUNCTION(BlueprintPure, Category="SideEffects|Multipliers") float GetThirstStaminaCapMultiplier() const { return ThirstStaminaCapMultiplier; }
+    
     UFUNCTION(BlueprintPure, Category="Warnings") float GetStarvationWarningThreshold() const { return StarvationWarningThreshold; }
     UFUNCTION(BlueprintPure, Category="Warnings") float GetDehydrationWarningThreshold() const { return DehydrationWarningThreshold; }
     UFUNCTION(BlueprintPure, Category="Warnings") float GetHeatstrokeWarningDelta() const { return HeatstrokeWarningDelta; }
