@@ -172,6 +172,26 @@ public:
     UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
     void RemoveSprintBlockTag(ACharacter* Character);
 
+    /** Applies a jump blocking tag to prevent jumping while this effect is active. */
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
+    void ApplyJumpBlockTag(ACharacter* Character);
+
+    /** Removes the jump blocking tag when effect ends. */
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
+    void RemoveJumpBlockTag(ACharacter* Character);
+
+    /** Applies a movement speed modifier through the status effect system instead of direct manipulation. */
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Movement")
+    void ApplyMovementSpeedModifier(ACharacter* Character, float Multiplier);
+
+    /** Removes movement speed modifier applied by this status effect. */
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Movement")
+    void RemoveMovementSpeedModifier(ACharacter* Character);
+
+    /** Syncs movement speed from configured attribute modifiers to ACF movement component. */
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Movement")
+    static void SyncMovementSpeedFromStatusEffects(ACharacter* Character);
+
 protected:
     // =====================================================
     //         ACF STATUS EFFECT OVERRIDES
