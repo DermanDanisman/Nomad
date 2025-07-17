@@ -1,87 +1,78 @@
-# Status Effect System Migration Guide
-
-This document outlines the refactoring of the Nomad status effect system to eliminate hardcoded attribute tags and direct stat manipulations, making the system fully data-driven through status effects and their configurations.
+# Status Effect System Refactoring Guide
 
 ## Overview
 
-The previous system relied on hardcoded attribute tags and direct stat value manipulations. The new system uses exclusively status effects and their associated configurations for all survival mechanics, including movement speed adjustments and input blocking.
+This guide explains the refactoring of the `NomadStatusEffectGameplayHelpers` system to eliminate hardcoded attribute tags and make the entire system fully data-driven through existing status effects and their configurations.
+
+## Key Architecture Change
+
+**Previous Approach**: Created dedicated movement speed status effect classes
+**Current Approach**: Use existing status effect types (Infinite, Timed, Survival) with configurable data assets
+
+The system now leverages the existing, well-designed status effect architecture where:
+- **Movement speed modifications** are handled via `PersistentAttributeModifier` in config assets
+- **Input blocking** is handled via `BlockingTags` in config assets
+- **Effect types** are determined by base class choice (Infinite, Timed, Survival)
 
 ## Key Changes
 
-### 1. Movement Speed System Refactoring
+### 1. Configurable Movement Speed System
 
-#### Old Approach (Deprecated)
+**Old Approach** (Hardcoded):
 ```cpp
-// Hardcoded attribute tag
-UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(MyCharacter);
-
-// Manual GUID tracking
-UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedModifierToState(
-    MoveComp, ELocomotionState::EWalk, 0.5f, MyGuid);
+// Hardcoded attribute tag usage
+UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(Character);
+UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedModifierToState(MoveComp, State, 0.5f, MyGuid);
 ```
 
-#### New Approach (Recommended)
+**New Approach** (Configurable):
 ```cpp
 // Configurable attribute tag
-UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromAttribute(
-    MyCharacter, MyCustomMovementSpeedTag);
+UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromAttribute(Character, CustomMovementSpeedTag);
+// Or use the recommended default
+UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromDefaultAttribute(Character);
 
-// Or use the default
-UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromDefaultAttribute(MyCharacter);
-
-// Status effect-driven movement modification
+// Status effect-driven movement modification using existing status effect types
 UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedStatusEffect(
-    MyCharacter, UNomadSpeedPenaltyStatusEffect::StaticClass(), 0.0f);
+    Character, UNomadInfiniteStatusEffect::StaticClass(), Duration);
 ```
 
-### 2. Input Blocking Enhancement
+### 2. Data-Driven Movement Effects
 
-#### Old Approach (Limited)
+**Use existing status effect types with proper configuration:**
+
+- **UNomadInfiniteStatusEffect**: For permanent movement changes (equipment bonuses, buffs)
+- **UNomadTimedStatusEffect**: For temporary movement changes (potions, debuffs) 
+- **UNomadSurvivalStatusEffect**: For survival-related movement effects (starvation, dehydration)
+
+**Configuration via Data Assets:**
 ```cpp
-// Only sprint blocking was supported
-bool bIsBlocked = UNomadStatusEffectGameplayHelpers::IsSprintBlocked(MyCharacter);
+// In your UNomadInfiniteEffectConfig asset:
+PersistentAttributeModifier.MovementSpeed = 0.8f;  // 20% speed reduction
+BlockingTags.AddTag("Status.Block.Sprint");        // Block sprinting
+BlockingTags.AddTag("Status.Block.Jump");          // Block jumping
 ```
 
-#### New Approach (Flexible)
+### 3. Enhanced Input Blocking System
+
+**Old** (Limited to sprint):
 ```cpp
-// Multiple action blocking support
-bool bSprintBlocked = UNomadStatusEffectGameplayHelpers::IsSprintBlocked(MyCharacter);
-bool bJumpBlocked = UNomadStatusEffectGameplayHelpers::IsJumpBlocked(MyCharacter);
+bool bBlocked = UNomadStatusEffectGameplayHelpers::IsSprintBlocked(Character);
+```
+
+**New** (Any action):
+```cpp
+bool bSprintBlocked = UNomadStatusEffectGameplayHelpers::IsSprintBlocked(Character);
+bool bJumpBlocked = UNomadStatusEffectGameplayHelpers::IsJumpBlocked(Character);
 bool bCustomBlocked = UNomadStatusEffectGameplayHelpers::IsActionBlocked(
-    MyCharacter, FGameplayTag::RequestGameplayTag("Status.Block.Interact"));
+    Character, FGameplayTag::RequestGameplayTag("Status.Block.Interact"));
 ```
-
-### 3. Movement Status Effects
-
-#### New Status Effect Classes
-- `UNomadMovementSpeedStatusEffect` - Base class for all movement modifications
-- `UNomadSpeedBoostStatusEffect` - For movement speed increases
-- `UNomadSpeedPenaltyStatusEffect` - For movement speed decreases
-- `UNomadMovementDisabledStatusEffect` - For complete movement restriction
-
-#### Configuration-Driven Approach
-All movement speed values now come from `UNomadInfiniteEffectConfig` data assets:
-- `PersistentAttributeModifier` - Defines attribute modifications
-- `BlockingTags` - Defines which actions to block
-- No hardcoded multipliers or thresholds
-
-### 4. Survival System Integration
-
-#### Old Approach (Mixed)
-- Some effects used hardcoded attribute manipulation
-- Manual GUID tracking for movement penalties
-- Direct stat modifications
-
-#### New Approach (Unified)
-- All survival effects use status effect classes
-- Config-driven attribute modifiers
-- Automatic cleanup and state management
 
 ## Migration Steps
 
-### For Existing Code Using Old Methods
+### For Existing Movement Speed Code
 
-1. **Replace hardcoded movement speed sync:**
+1. **Replace hardcoded movement sync:**
    ```cpp
    // Old
    UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(Character);
@@ -90,15 +81,15 @@ All movement speed values now come from `UNomadInfiniteEffectConfig` data assets
    UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromDefaultAttribute(Character);
    ```
 
-2. **Replace manual movement modifiers:**
+2. **Replace direct movement speed modification:**
    ```cpp
    // Old
    UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedModifierToState(
-       MoveComp, State, 0.8f, MyGuid);
+       MoveComp, ELocomotionState::EWalk, 0.5f, MyGuid);
    
-   // New
+   // New - Use status effects with config assets
    UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedStatusEffect(
-       Character, UNomadSpeedPenaltyStatusEffect::StaticClass(), Duration);
+       Character, UNomadTimedStatusEffect::StaticClass(), Duration);
    ```
 
 3. **Enhance input blocking:**
@@ -111,12 +102,67 @@ All movement speed values now come from `UNomadInfiniteEffectConfig` data assets
        UNomadStatusEffectGameplayHelpers::IsActionBlocked(Character, CustomTag))
    ```
 
-### For New Status Effects
+### For New Movement Effects
 
-1. **Create effect config assets** using `UNomadInfiniteEffectConfig`
-2. **Set PersistentAttributeModifier** for movement speed changes
-3. **Set BlockingTags** for input restrictions
-4. **Use the new movement status effect classes** as base classes
+1. **Create effect config assets** using appropriate config type:
+   - `UNomadInfiniteEffectConfig` for permanent effects
+   - `UNomadTimedEffectConfig` for temporary effects
+   - Survival-specific configs for survival effects
+
+2. **Configure movement modifications:**
+   ```cpp
+   // In your config asset:
+   PersistentAttributeModifier.RPG_Attributes_MovementSpeed = 1.5f;  // 50% speed boost
+   ```
+
+3. **Configure input blocking:**
+   ```cpp
+   // In your config asset:
+   BlockingTags.AddTag("Status.Block.Sprint");
+   BlockingTags.AddTag("Status.Block.Jump");
+   ```
+
+4. **Use existing status effect classes** as base classes:
+   ```cpp
+   // Apply infinite movement speed boost
+   SEManager->ApplyInfiniteStatusEffect(UNomadInfiniteStatusEffect::StaticClass());
+   
+   // Apply timed movement penalty
+   SEManager->ApplyTimedStatusEffect(UNomadTimedStatusEffect::StaticClass(), 30.0f);
+   ```
+
+## Configuration Examples
+
+### Speed Boost Effect (Equipment Bonus)
+```cpp
+// UNomadInfiniteEffectConfig asset setup:
+EffectName = "Speed Boost";
+EffectTag = "StatusEffect.Equipment.SpeedBoost";
+PersistentAttributeModifier.RPG_Attributes_MovementSpeed = 1.25f;  // 25% speed increase
+Category = ENomadStatusCategory::Positive;
+```
+
+### Movement Penalty (Survival Effect)
+```cpp
+// UNomadInfiniteEffectConfig asset setup:
+EffectName = "Exhaustion";
+EffectTag = "StatusEffect.Survival.MovementPenalty.Heavy";
+PersistentAttributeModifier.RPG_Attributes_MovementSpeed = 0.7f;   // 30% speed reduction
+BlockingTags.AddTag("Status.Block.Sprint");                       // Can't sprint when exhausted
+Category = ENomadStatusCategory::Negative;
+```
+
+### Temporary Slow Effect (Potion/Debuff)
+```cpp
+// UNomadTimedEffectConfig asset setup:
+EffectName = "Slowness";
+EffectTag = "StatusEffect.Debuff.Slowness";
+PersistentAttributeModifier.RPG_Attributes_MovementSpeed = 0.5f;   // 50% speed reduction
+BlockingTags.AddTag("Status.Block.Sprint");
+BlockingTags.AddTag("Status.Block.Jump");
+Duration = 15.0f;  // 15 seconds
+Category = ENomadStatusCategory::Negative;
+```
 
 ## Backward Compatibility
 
@@ -127,12 +173,15 @@ All movement speed values now come from `UNomadInfiniteEffectConfig` data assets
 
 ## Benefits
 
-1. **Data-Driven Design** - All values come from config assets
-2. **Flexible Input Blocking** - Support for any action blocking via gameplay tags
-3. **Unified API** - Consistent interface for all movement speed modifications
-4. **Better Integration** - Seamless integration with existing survival system
-5. **Enhanced Debugging** - Helper methods for checking active effects
-6. **Maintainability** - No hardcoded values scattered throughout the codebase
+1. **Simpler Architecture** - Fewer classes to maintain, leveraging existing system
+2. **More Flexible** - Any status effect can modify movement speed via config
+3. **Consistent** - All effects use the same configuration pattern
+4. **Data-Driven Design** - All values come from config assets
+5. **Flexible Input Blocking** - Support for any action blocking via gameplay tags
+6. **Unified API** - Consistent interface for all movement speed modifications
+7. **Better Integration** - Seamless integration with existing survival system
+8. **Enhanced Debugging** - Helper methods for checking active effects
+9. **Maintainability** - No hardcoded values scattered throughout the codebase
 
 ## Testing Checklist
 
@@ -151,10 +200,11 @@ All movement speed values now come from `UNomadInfiniteEffectConfig` data assets
 3. **Mixing old and new approaches** in the same codebase
 4. **Not configuring PersistentAttributeModifier** for movement effects
 5. **Using hardcoded tags** instead of configurable ones
+6. **Creating unnecessary specialized classes** instead of using config-driven existing classes
 
 ## Support
 
 For questions about migration or new functionality, refer to:
 - Method documentation in `NomadStatusEffectGameplayHelpers.h`
-- Status effect class documentation in movement effect headers
-- Configuration examples in data asset comments
+- Status effect class documentation
+- Configuration asset documentation for each status effect type

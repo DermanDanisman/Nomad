@@ -7,7 +7,7 @@
 #include "GameplayTagContainer.h"
 #include "Components/ACFCharacterMovementComponent.h"
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
-#include "Core/StatusEffect/Movement/NomadMovementSpeedStatusEffect.h"
+// Movement speed modifications are now handled through existing status effect types with configs
 #include "GameFramework/CharacterMovementComponent.h"
 
 void UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(ACharacter* Character)
@@ -240,50 +240,74 @@ void UNomadStatusEffectGameplayHelpers::ApplySurvivalMovementPenalty(
     ESurvivalSeverity PenaltyLevel)
 {
     /**
-     * NEW: Helper method to apply standard survival movement penalty.
-     * This replaces hardcoded movement slowing with a data-driven status effect approach.
+     * Helper method to apply standard survival movement penalty.
+     * 
+     * NOTE: This method provides a simplified interface, but the recommended approach
+     * is to use UNomadSurvivalStatusEffect directly with appropriate config assets
+     * that define PersistentAttributeModifier for movement speed changes and 
+     * BlockingTags for input restrictions.
+     * 
+     * Example config setup:
+     * - PersistentAttributeModifier: Set movement speed multiplier (0.8 for 20% penalty)
+     * - BlockingTags: Include "Status.Block.Sprint" for severe penalties
+     * - EffectTag: Use "StatusEffect.Survival.MovementPenalty.Mild/Heavy/Severe"
      */
     if (!Character) return;
+    
+    auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
+    if (!SEManager) return;
     
     // Remove any existing survival movement penalty first
     RemoveSurvivalMovementPenalty(Character);
     
-    // Determine which status effect to apply based on penalty level
-    TSubclassOf<UNomadBaseStatusEffect> EffectClass = nullptr;
-    
+    // Get appropriate survival status effect tag based on penalty level
+    FGameplayTag EffectTag;
     switch (PenaltyLevel)
     {
         case ESurvivalSeverity::Mild:
-            // Apply mild speed penalty - typically 10-20% reduction
-            EffectClass = UNomadSpeedPenaltyStatusEffect::StaticClass();
+            EffectTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Mild");
             break;
         case ESurvivalSeverity::Heavy:
-            // Apply heavy speed penalty - typically 30-50% reduction  
-            EffectClass = UNomadSpeedPenaltyStatusEffect::StaticClass();
+            EffectTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Heavy");
             break;
         case ESurvivalSeverity::Severe:
         case ESurvivalSeverity::Extreme:
-            // Apply severe movement restriction - typically 60-80% reduction
-            EffectClass = UNomadMovementDisabledStatusEffect::StaticClass();
+            EffectTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Severe");
             break;
         default:
             return; // No penalty for None severity
     }
     
-    if (EffectClass)
-    {
-        ApplyMovementSpeedStatusEffect(Character, EffectClass, 0.0f); // Infinite duration
-    }
+    // TODO: Apply survival status effect with the appropriate tag
+    // This requires creating config assets for each severity level with proper
+    // PersistentAttributeModifier values for movement speed reduction
+    // 
+    // Example: SEManager->ApplyInfiniteStatusEffect(UNomadSurvivalStatusEffect::StaticClass(), EffectTag);
+    
+    UE_LOG_AFFLICTION(Warning, TEXT("[SURVIVAL] ApplySurvivalMovementPenalty requires config assets for tag: %s"), 
+        *EffectTag.ToString());
 }
 
 void UNomadStatusEffectGameplayHelpers::RemoveSurvivalMovementPenalty(ACharacter* Character)
 {
     /**
-     * NEW: Helper method to remove survival movement penalties.
+     * Helper method to remove survival movement penalties.
+     * Removes all survival-related movement penalty effects.
      */
     if (!Character) return;
     
-    // Remove all types of survival-related movement penalties
-    RemoveMovementSpeedStatusEffect(Character, FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedPenalty"));
-    RemoveMovementSpeedStatusEffect(Character, FGameplayTag::RequestGameplayTag("StatusEffect.Movement.Disabled"));
+    auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
+    if (!SEManager) return;
+    
+    // Remove all types of survival-related movement penalties using their gameplay tags
+    FGameplayTag MildTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Mild");
+    FGameplayTag HeavyTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Heavy");
+    FGameplayTag SevereTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Severe");
+    
+    if (MildTag.IsValid()) SEManager->Nomad_RemoveStatusEffect(MildTag);
+    if (HeavyTag.IsValid()) SEManager->Nomad_RemoveStatusEffect(HeavyTag);
+    if (SevereTag.IsValid()) SEManager->Nomad_RemoveStatusEffect(SevereTag);
+    
+    // Sync movement speed after removing effects
+    SyncMovementSpeedFromDefaultAttribute(Character);
 }

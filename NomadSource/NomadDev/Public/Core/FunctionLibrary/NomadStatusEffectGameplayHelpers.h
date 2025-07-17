@@ -154,10 +154,17 @@ public:
 
     /**
      * Apply a movement speed effect through the status effect system.
-     * This is the recommended approach for temporary movement speed modifications.
+     * 
+     * RECOMMENDED APPROACH: Use existing status effect types with proper config assets:
+     * - UNomadInfiniteStatusEffect: For permanent movement changes
+     * - UNomadTimedStatusEffect: For temporary movement changes  
+     * - UNomadSurvivalStatusEffect: For survival-related movement effects
+     * 
+     * Configure movement speed via config asset's PersistentAttributeModifier.
+     * Configure input blocking via config asset's BlockingTags.
      * 
      * @param Character The character to apply the effect to.
-     * @param StatusEffectClass The status effect class to apply (should have movement speed modifiers configured).
+     * @param StatusEffectClass The status effect class (should have PersistentAttributeModifier configured).
      * @param Duration Duration of the effect (0 for infinite).
      */
     UFUNCTION(BlueprintCallable, Category="Nomad|Movement")
