@@ -430,8 +430,11 @@ void UNomadBaseStatusEffect::SyncMovementSpeedFromStatusEffects(ACharacter* Char
         return;
     }
     
+    // Use the default movement speed attribute tag defined in one place
+    static const FGameplayTag DefaultMovementSpeedTag = FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed"));
+    
     // Get movement speed from attribute system (which includes all status effect modifiers)
-    const float NewSpeed = StatsComp->GetCurrentAttributeValue(FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed")));
+    const float NewSpeed = StatsComp->GetCurrentAttributeValue(DefaultMovementSpeedTag);
     
     if (NewSpeed > 0.f)
     {
