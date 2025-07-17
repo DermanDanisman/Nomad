@@ -17,40 +17,64 @@
 
 UNomadInfiniteStatusEffect::UNomadInfiniteStatusEffect()
 {
+    // Initialize timing settings
     CachedTickInterval = 5.0f;
     bCachedHasPeriodicTick = false;
     StartTime = 0.0f;
     TickCount = 0;
+    
+    // Initialize modifier tracking
     AppliedModifierGuid = FGuid();
     LastTickDamage = 0.0f;
+    StackCount = 1;
+    
+    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[INFINITE] Infinite status effect constructed"));
 }
 
 // =====================================================
-//         STACKING / REFRESH LOGIC (BP & C++)
+//         STACKING / REFRESH LOGIC
 // =====================================================
 
 void UNomadInfiniteStatusEffect::OnStacked_Implementation(const int32 NewStackCount)
 {
+    // Called when the effect is stacked (multiple applications).
     StackCount = NewStackCount;
+    
+    // Refresh persistent modifiers with new stack count
     RemoveAttributeSetModifier();
     ApplyAttributeSetModifier();
+    
+    UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Effect stacked to %d"), NewStackCount);
 }
 
 void UNomadInfiniteStatusEffect::OnRefreshed_Implementation()
 {
+    // Called when the effect is refreshed (reapplied at max stacks).
+    // For infinite effects, this typically just resets any decay or applies fresh modifiers
     RemoveAttributeSetModifier();
     ApplyAttributeSetModifier();
+    
+    UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Effect refreshed"));
 }
 
 void UNomadInfiniteStatusEffect::OnUnstacked(int32 NewStackCount)
 {
+    // Called by manager when a stack is removed.
     StackCount = NewStackCount;
-    RemoveAttributeSetModifier();
-    ApplyAttributeSetModifier();
+    
+    if (StackCount > 0)
+    {
+        // Update persistent modifiers for new stack count
+        RemoveAttributeSetModifier();
+        ApplyAttributeSetModifier();
+        
+        UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Effect unstacked to %d"), NewStackCount);
+    }
+    // If StackCount is 0, the manager will destroy this instance
 }
 
 // =====================================================
-//         CONFIGURATION ACCESS & APPLICATION
+//         CONFIGURATION ACCESS
 // =====================================================
 
 UNomadInfiniteEffectConfig* UNomadInfiniteStatusEffect::GetEffectConfig() const
@@ -61,13 +85,24 @@ UNomadInfiniteEffectConfig* UNomadInfiniteStatusEffect::GetEffectConfig() const
 void UNomadInfiniteStatusEffect::ApplyConfiguration()
 {
     UNomadInfiniteEffectConfig* Config = GetEffectConfig();
-    if (!Config) return;
-    if (!Config->IsConfigValid()) return;
+    if (!Config) 
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[INFINITE] Cannot apply configuration - config is null"));
+        return;
+    }
+    
+    if (!Config->IsConfigValid()) 
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[INFINITE] Configuration validation failed"));
+        return;
+    }
 
     CacheConfigurationValues();
     ApplyBaseConfiguration();
     ApplyConfigurationTag();
     ApplyConfigurationIcon();
+    
+    UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Configuration applied successfully"));
 }
 
 bool UNomadInfiniteStatusEffect::HasValidConfiguration() const
@@ -113,6 +148,10 @@ ENomadStatusCategory UNomadInfiniteStatusEffect::GetStatusCategory_Implementatio
     return Super::GetStatusCategory_Implementation();
 }
 
+// =====================================================
+//         QUERY FUNCTIONS
+// =====================================================
+
 float UNomadInfiniteStatusEffect::GetUptime() const
 {
     if (!CharacterOwner || !CharacterOwner->GetWorld() || StartTime <= 0.0f)
@@ -133,103 +172,173 @@ bool UNomadInfiniteStatusEffect::ShouldPersistThroughSaveLoad() const
 }
 
 // =====================================================
-//         MANUAL/FORCED CONTROL (REMOVAL)
+//         MANUAL/FORCED CONTROL
 // =====================================================
 
 bool UNomadInfiniteStatusEffect::TryManualRemoval(AActor* Remover)
 {
     if (!CanBeManuallyRemoved())
+    {
+        UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Manual removal not allowed"));
         return false;
+    }
 
+    // Check if removal is allowed via Blueprint
     bool bAllowRemoval = OnManualRemovalAttempt_Implementation(Remover);
     if (!bAllowRemoval)
     {
+        // Give Blueprint a chance to override
         OnManualRemovalAttempt(Remover);
         if (!bAllowRemoval)
+        {
+            UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Manual removal denied by Blueprint logic"));
             return false;
+        }
     }
+    
+    // Remove through manager if available
     if (CharacterOwner)
     {
         if (UNomadStatusEffectManagerComponent* Manager = CharacterOwner->FindComponentByClass<UNomadStatusEffectManagerComponent>())
         {
             Manager->Nomad_RemoveStatusEffect(GetEffectiveTag());
+            UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Manual removal successful via manager"));
             return true;
         }
     }
+    
+    // Fallback to direct removal
     EndEffect();
+    UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Manual removal successful via direct end"));
     return true;
 }
 
 void UNomadInfiniteStatusEffect::ForceRemoval()
 {
+    UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Force removal initiated"));
     EndEffect();
 }
 
 void UNomadInfiniteStatusEffect::Nomad_OnStatusEffectStarts(ACharacter* Character)
 {
     Super::Nomad_OnStatusEffectStarts(Character);
-    
     OnStatusEffectStarts_Implementation(Character);
 }
+
+// =====================================================
+//         EFFECT LIFECYCLE: START / END
+// =====================================================
 
 void UNomadInfiniteStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Character)
 {
     Super::OnStatusEffectStarts_Implementation(Character);
     SetEffectLifecycleState(EEffectLifecycleState::Active);
 
-    if (Character && Character->GetWorld())
+    if (!Character || !Character->GetWorld())
     {
-        StartTime = Character->GetWorld()->GetTimeSeconds();
-        TickCount = 0;
-
-        UNomadInfiniteEffectConfig* Config = GetEffectConfig();
-        if (Config && Config->OnActivationStatModifications.Num() > 0)
-        {
-            int32 CurrentStacks = GetCurrentStackCount();
-            StackCount = CurrentStacks;
-            TArray<FStatisticValue> ScaledMods = Config->OnActivationStatModifications;
-            for (FStatisticValue& Mod : ScaledMods)
-                Mod.Value *= CurrentStacks;
-            ApplyHybridEffect(ScaledMods, Character, Config);
-            OnStatModificationsApplied_Implementation(ScaledMods);
-            OnStatModificationsApplied(ScaledMods);
-        }
-
-        ApplyAttributeSetModifier();
-        SetupInfiniteTicking();
-
-        OnInfiniteEffectActivated_Implementation(Character);
-        OnInfiniteEffectActivated(Character);
+        UE_LOG_AFFLICTION(Error, TEXT("[INFINITE] Cannot start - invalid character or world"));
+        return;
     }
+
+    UNomadInfiniteEffectConfig* Config = GetEffectConfig();
+    if (!Config)
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[INFINITE] Cannot start - invalid config"));
+        return;
+    }
+
+    // Initialize timing
+    StartTime = Character->GetWorld()->GetTimeSeconds();
+    TickCount = 0;
+    int32 CurrentStacks = GetCurrentStackCount();
+    StackCount = CurrentStacks;
+
+    // Apply activation stat modifications, scaled by stack count
+    if (Config->OnActivationStatModifications.Num() > 0)
+    {
+        TArray<FStatisticValue> ScaledMods = Config->OnActivationStatModifications;
+        for (FStatisticValue& Mod : ScaledMods)
+        {
+            Mod.Value *= CurrentStacks;
+        }
+        ApplyHybridEffect(ScaledMods, Character, Config);
+        OnStatModificationsApplied_Implementation(ScaledMods);
+        OnStatModificationsApplied(ScaledMods);
+    }
+
+    // Apply persistent attribute modifiers
+    ApplyAttributeSetModifier();
+    
+    // Setup periodic ticking if enabled
+    SetupInfiniteTicking();
+
+    // Trigger chain effects if configured
+    if (Config->bTriggerActivationChainEffects && Config->ActivationChainEffects.Num() > 0)
+    {
+        // TODO: Implement chain effect triggering through manager
+        UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Activation chain effects triggered"));
+    }
+
+    // Trigger Blueprint events
+    OnInfiniteEffectActivated_Implementation(Character);
+    OnInfiniteEffectActivated(Character);
+    
+    UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Effect started successfully with %d stacks"), CurrentStacks);
 }
 
 void UNomadInfiniteStatusEffect::OnStatusEffectEnds_Implementation()
 {
     UNomadInfiniteEffectConfig* Config = GetEffectConfig();
+    
+    // Apply deactivation stat modifications
     if (Config && Config->OnDeactivationStatModifications.Num() > 0)
     {
-        if (GetEffectLifecycleState() != EEffectLifecycleState::Active && GetEffectLifecycleState() != EEffectLifecycleState::Ending)
+        if (GetEffectLifecycleState() != EEffectLifecycleState::Active && 
+            GetEffectLifecycleState() != EEffectLifecycleState::Ending)
+        {
+            UE_LOG_AFFLICTION(Warning, TEXT("[INFINITE] End called on non-active effect"));
             return;
+        }
 
         ApplyHybridEffect(Config->OnDeactivationStatModifications, CharacterOwner, Config);
         OnStatModificationsApplied_Implementation(Config->OnDeactivationStatModifications);
         OnStatModificationsApplied(Config->OnDeactivationStatModifications);
     }
 
+    // Trigger deactivation chain effects
+    if (Config && Config->bTriggerDeactivationChainEffects && Config->DeactivationChainEffects.Num() > 0)
+    {
+        // TODO: Implement chain effect triggering through manager
+        UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Deactivation chain effects triggered"));
+    }
+
+    // Remove persistent modifiers
     RemoveAttributeSetModifier();
+    
+    // Clear ticking
     ClearInfiniteTicking();
+    
+    // Trigger Blueprint events
     OnInfiniteEffectDeactivated_Implementation();
     OnInfiniteEffectDeactivated();
 
     Super::OnStatusEffectEnds_Implementation();
+    
+    UE_LOG_AFFLICTION(Log, TEXT("[INFINITE] Effect ended successfully"));
 }
+
+// =====================================================
+//         DEFAULT BLUEPRINT IMPLEMENTATIONS
+// =====================================================
 
 void UNomadInfiniteStatusEffect::OnInfiniteEffectActivated_Implementation(ACharacter* Character)
 {
+    // Default implementation - override in Blueprint or derived classes
 }
 
 void UNomadInfiniteStatusEffect::OnInfiniteTick_Implementation(float Uptime, int32 CurrentTickCount)
 {
+    // Default implementation - override in Blueprint or derived classes
 }
 
 bool UNomadInfiniteStatusEffect::OnManualRemovalAttempt_Implementation(AActor* Remover)
@@ -239,17 +348,24 @@ bool UNomadInfiniteStatusEffect::OnManualRemovalAttempt_Implementation(AActor* R
 
 void UNomadInfiniteStatusEffect::OnInfiniteEffectDeactivated_Implementation()
 {
-    ClearInfiniteTicking();
+    // Default implementation - override in Blueprint or derived classes
 }
 
 void UNomadInfiniteStatusEffect::OnStatModificationsApplied_Implementation(const TArray<FStatisticValue>& StatisticModifications)
 {
+    // Default implementation - override in Blueprint or derived classes
 }
+
+// =====================================================
+//         TIMER MANAGEMENT (PERIODIC TICK)
+// =====================================================
 
 void UNomadInfiniteStatusEffect::SetupInfiniteTicking()
 {
     if (!bCachedHasPeriodicTick || CachedTickInterval <= 0.0f || !CharacterOwner || !CharacterOwner->GetWorld())
+    {
         return;
+    }
 
     UWorld* World = CharacterOwner->GetWorld();
     FTimerManager& TimerManager = World->GetTimerManager();
@@ -259,8 +375,10 @@ void UNomadInfiniteStatusEffect::SetupInfiniteTicking()
         this,
         &UNomadInfiniteStatusEffect::HandleInfiniteTick,
         CachedTickInterval,
-        true
+        true // Repeating
     );
+    
+    UE_LOG_AFFLICTION(Verbose, TEXT("[INFINITE] Periodic ticking setup with %.2f second intervals"), CachedTickInterval);
 }
 
 void UNomadInfiniteStatusEffect::ClearInfiniteTicking()
@@ -270,31 +388,49 @@ void UNomadInfiniteStatusEffect::ClearInfiniteTicking()
 
     UWorld* World = CharacterOwner->GetWorld();
     FTimerManager& TimerManager = World->GetTimerManager();
-
     TimerManager.ClearTimer(TickTimerHandle);
+    
+    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[INFINITE] Periodic ticking cleared"));
 }
 
 void UNomadInfiniteStatusEffect::HandleInfiniteTick()
 {
+    if (GetEffectLifecycleState() != EEffectLifecycleState::Active)
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[INFINITE] Tick called on non-active effect"));
+        return;
+    }
+
     TickCount++;
     float CurrentUptime = GetUptime();
+    int32 CurrentStacks = GetCurrentStackCount();
+    StackCount = CurrentStacks;
+
+    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[INFINITE] Tick %d (uptime: %.1fs, stacks: %d)"), 
+                      TickCount, CurrentUptime, CurrentStacks);
 
     UNomadInfiniteEffectConfig* Config = GetEffectConfig();
     if (Config && Config->OnTickStatModifications.Num() > 0)
     {
-        int32 CurrentStacks = GetCurrentStackCount();
-        StackCount = CurrentStacks;
+        // Apply tick modifications scaled by stack count
         TArray<FStatisticValue> ScaledMods = Config->OnTickStatModifications;
         for (FStatisticValue& Mod : ScaledMods)
+        {
             Mod.Value *= CurrentStacks;
+        }
         ApplyHybridEffect(ScaledMods, CharacterOwner, Config);
         OnStatModificationsApplied_Implementation(ScaledMods);
         OnStatModificationsApplied(ScaledMods);
     }
 
+    // Trigger Blueprint events
     OnInfiniteTick_Implementation(CurrentUptime, TickCount);
     OnInfiniteTick(CurrentUptime, TickCount);
 }
+
+// =====================================================
+//         HYBRID SYSTEM: STAT/DAMAGE APPLICATION
+// =====================================================
 
 void UNomadInfiniteStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>& StatMods, AActor* Target, UObject* EffectConfigObj)
 {
@@ -320,11 +456,10 @@ void UNomadInfiniteStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>
                     if (Mod.Statistic.MatchesTag(Health))
                         EffectDamage += Mod.Value;
                 }
-                OnStatModificationsApplied_Implementation(StatMods);
-                OnStatModificationsApplied(StatMods);
             }
         }
         break;
+        
     case EStatusEffectApplicationMode::DamageEvent:
         {
             if (Config->DamageTypeClass && Config->DamageStatisticMods.Num() > 0)
@@ -343,11 +478,10 @@ void UNomadInfiniteStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>
                         EffectDamage += Mod.Value;
                     }
                 }
-                OnStatModificationsApplied_Implementation(StatMods);
-                OnStatModificationsApplied(StatMods);
             }
         }
         break;
+        
     case EStatusEffectApplicationMode::Both:
         {
             UARSStatisticsComponent* StatsComp = Target->FindComponentByClass<UARSStatisticsComponent>();
@@ -355,6 +489,7 @@ void UNomadInfiniteStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>
             {
                 UNomadStatusEffectUtils::ApplyStatModifications(StatsComp, StatMods);
             }
+            
             if (Config->DamageTypeClass)
             {
                 for (const FStatisticValue& Mod : StatMods)
@@ -372,8 +507,6 @@ void UNomadInfiniteStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>
                     }
                 }
             }
-            OnStatModificationsApplied_Implementation(StatMods);
-            OnStatModificationsApplied(StatMods);
         }
         break;
     default:
@@ -382,6 +515,7 @@ void UNomadInfiniteStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>
 
     LastTickDamage = EffectDamage;
 
+    // Record damage analytics
     if (Config->ApplicationMode != EStatusEffectApplicationMode::StatModification && !FMath::IsNearlyZero(EffectDamage))
     {
         if (UActorComponent* Comp = Target->GetComponentByClass(UNomadStatusEffectManagerComponent::StaticClass()))
@@ -394,43 +528,64 @@ void UNomadInfiniteStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>
     }
 }
 
+// =====================================================
+//         MODIFIER HELPERS
+// =====================================================
+
 void UNomadInfiniteStatusEffect::ApplyAttributeSetModifier()
 {
     const UNomadInfiniteEffectConfig* Config = GetEffectConfig();
-    if (!Config || !CharacterOwner)
-        return;
+    if (!Config || !CharacterOwner) return;
 
     const FAttributesSetModifier& Mod = Config->PersistentAttributeModifier;
-    if (Mod.PrimaryAttributesMod.Num() == 0 && Mod.AttributesMod.Num() == 0 && Mod.StatisticsMod.Num() == 0)
+    if (Mod.PrimaryAttributesMod.Num() == 0 && 
+        Mod.AttributesMod.Num() == 0 && 
+        Mod.StatisticsMod.Num() == 0)
+    {
         return;
+    }
 
     UARSStatisticsComponent* StatsComp = CharacterOwner->FindComponentByClass<UARSStatisticsComponent>();
-    if (!StatsComp)
-        return;
+    if (!StatsComp) return;
 
-    AppliedModifierGuid = Mod.Guid;
-    StatsComp->AddAttributeSetModifier(Mod);
+    // Create scaled modifier based on stack count
+    FAttributesSetModifier ScaledModifier = Mod;
+    for (FAttributeModifier& AttrMod : ScaledModifier.PrimaryAttributesMod)
+    {
+        AttrMod.Value *= StackCount;
+    }
+    for (FAttributeModifier& AttrMod : ScaledModifier.AttributesMod)
+    {
+        AttrMod.Value *= StackCount;
+    }
+    for (FStatisticsModifier& StatMod : ScaledModifier.StatisticsMod)
+    {
+        StatMod.MaxValue *= StackCount;
+        StatMod.RegenValue *= StackCount;
+    }
 
-    // Fire BP event for each modifier (primary, attributes, statistics)
-    for (const FAttributeModifier& AttrMod : Mod.PrimaryAttributesMod)
+    AppliedModifierGuid = ScaledModifier.Guid;
+    StatsComp->AddAttributeSetModifier(ScaledModifier);
+
+    // Fire Blueprint events for each modifier
+    for (const FAttributeModifier& AttrMod : ScaledModifier.PrimaryAttributesMod)
     {
         OnPersistentAttributeApplied(AttrMod);
     }
-    for (const FAttributeModifier& AttrMod : Mod.AttributesMod)
+    for (const FAttributeModifier& AttrMod : ScaledModifier.AttributesMod)
     {
         OnPersistentAttributeApplied(AttrMod);
     }
-    // Optionally for FStatisticsModifier as well if you want, add a similar BP event
+    
+    UE_LOG_AFFLICTION(Verbose, TEXT("[INFINITE] Applied persistent attribute modifier with %d stacks"), StackCount);
 }
 
 void UNomadInfiniteStatusEffect::RemoveAttributeSetModifier()
 {
-    if (!CharacterOwner || !AppliedModifierGuid.IsValid())
-        return;
+    if (!CharacterOwner || !AppliedModifierGuid.IsValid()) return;
 
     UARSStatisticsComponent* StatsComp = CharacterOwner->FindComponentByClass<UARSStatisticsComponent>();
-    if (!StatsComp)
-        return;
+    if (!StatsComp) return;
 
     const UNomadInfiniteEffectConfig* Config = GetEffectConfig();
     if (Config)
@@ -438,7 +593,7 @@ void UNomadInfiniteStatusEffect::RemoveAttributeSetModifier()
         const FAttributesSetModifier& Mod = Config->PersistentAttributeModifier;
         StatsComp->RemoveAttributeSetModifier(Mod);
 
-        // Fire BP event for each modifier being removed
+        // Fire Blueprint events for each modifier being removed
         for (const FAttributeModifier& AttrMod : Mod.PrimaryAttributesMod)
         {
             OnPersistentAttributeRemoved(AttrMod);
@@ -447,29 +602,38 @@ void UNomadInfiniteStatusEffect::RemoveAttributeSetModifier()
         {
             OnPersistentAttributeRemoved(AttrMod);
         }
-        // Optionally for FStatisticsModifier as well
     }
 
     AppliedModifierGuid = FGuid();
+    UE_LOG_AFFLICTION(Verbose, TEXT("[INFINITE] Removed persistent attribute modifier"));
 }
 
 void UNomadInfiniteStatusEffect::CacheConfigurationValues()
 {
     UNomadInfiniteEffectConfig* Config = GetEffectConfig();
-    if (!Config)
-        return;
+    if (!Config) return;
+    
     CachedTickInterval = Config->TickInterval;
     bCachedHasPeriodicTick = Config->bHasPeriodicTick;
+    
+    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[INFINITE] Configuration values cached"));
 }
 
 int32 UNomadInfiniteStatusEffect::GetCurrentStackCount() const
 {
     if (!CharacterOwner) return StackCount;
+    
     UNomadStatusEffectManagerComponent* Manager = CharacterOwner->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!Manager) return StackCount;
-    FGameplayTag Tag = GetEffectConfig() ? GetEffectConfig()->EffectTag : FGameplayTag();
-    int32 Index = Manager->FindActiveEffectIndexByTag(Tag);
+    
+    const UNomadInfiniteEffectConfig* Config = GetEffectConfig();
+    if (!Config) return StackCount;
+    
+    const int32 Index = Manager->FindActiveEffectIndexByTag(Config->EffectTag);
     if (Index != INDEX_NONE)
+    {
         return Manager->GetActiveEffects()[Index].StackCount;
+    }
+    
     return StackCount;
 }

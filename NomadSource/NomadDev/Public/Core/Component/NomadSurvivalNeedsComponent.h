@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
-#include "NomadAfflictionComponent.h"
 #include "Core/Data/Player/NomadSurvivalNeedsData.h"
 #include "StatusEffectSystem/Public/StatusEffects/ACFBaseStatusEffect.h"
 #include "NomadSurvivalNeedsComponent.generated.h"
@@ -14,8 +13,9 @@
 ===============================================================================
 EDGE CASES & ROBUSTNESS NOTES
 ===============================================================================
-Last Updated: 2025-07-04 by DermanDanisman
-Recent Updates: Added escalating warning system, unified notification broadcasts
+Last Updated: 2025-07-17 by DermanDanisman
+Recent Updates: Consolidated status effect system, renamed confusing functions, 
+                added proper survival status effects with data-driven configuration
 
 1. Stat Clamping:
     - Stat modification (hunger, thirst, health, body temp) is always clamped.
@@ -23,10 +23,12 @@ Recent Updates: Added escalating warning system, unified notification broadcasts
     - Stat boundary conditions (at 0, crossing thresholds) are handled for both decay and recovery.
     - Stat changes from other systems (debug, cheats, etc.) are reflected immediately on next tick.
 
-2. Status Effect Consistency:
-    - Status effects are applied every tick while the hazard is active; duration should exceed tick interval.
-    - Effects must be set to "Can be Retriggered = TRUE" and "Stacking = FALSE" in asset to prevent stacking.
-    - If StatusEffectManagerComponent is missing, effect logic is skipped (consider warning).
+2. Status Effect System (UPDATED - 2025-07-17):
+    - NEW: Dual status effect system - generic (old) and survival-specific (new)
+    - NEW: Survival effects use UNomadSurvivalStatusEffect with data-driven attribute modifiers
+    - OLD: Generic effects continue using TryApplyStatusEffect for compatibility
+    - All effects must be set to "Can be Retriggered = TRUE" and "Stacking = FALSE" in asset
+    - Status effects handle their own attribute modifiers via config assets (no more manual GUID tracking)
 
 3. Time Jumps (Sleep, Fast Travel, Save/Load):
     - If time advances by >1 minute in a tick, only one OnMinuteTick is processed by default.
@@ -42,15 +44,19 @@ Recent Updates: Added escalating warning system, unified notification broadcasts
     - If a designer sets an invalid (e.g., negative) threshold or cooldown, gameplay may be unpredictable.
     - Recommend DataAsset validation at startup.
 
-6. Movement Slow/Recover:
-    - Only fires events; movement speed must be actually handled by another system listening to these events.
+6. Movement Slow/Recover (UPDATED - 2025-07-17):
+    - OLD: Manual attribute manipulation with hard-coded GUIDs (REMOVED)
+    - NEW: Status effects handle movement penalties via config-driven attribute modifiers
+    - Events still fire for UI/analytics but actual penalties are applied by status effects
 
 7. Multiple Hazards:
     - Different hazard effects (starvation, dehydration, heatstroke, hypothermia) are managed independently and can overlap.
     - Same effect will never stack; each is managed separately by tag/class.
+    - NEW: Survival effects are removed/reapplied each tick for clean state transitions
 
 8. Save/Load:
     - If you support save/load, ensure all survival state (stats, counters, cooldowns, flags) is serialized and restored.
+    - NEW: Status effects persist automatically via ACF status effect manager
 
 9. Per-Player Temperature System:
     - Each player samples temperature at their specific world location via BP_GetTemperatureAtPlayerLocation().
@@ -97,11 +103,38 @@ Recent Updates: Added escalating warning system, unified notification broadcasts
     - Warning counts and cooldown timers are server-only and not replicated (reduces network traffic).
     - LastExternalTemperature replication allows clients to show current temperature without server round-trip.
 
+15. Function Consolidation (NEW - 2025-07-17):
+    - RENAMED: EvaluateAndUpdateSurvivalState -> UpdateSurvivalUIState (clearer purpose)
+    - REMOVED: TryApplyStatusEffect (replaced with ApplyStatusEffect + ApplyGenericStatusEffect)
+    - ADDED: EvaluateAndApplySurvivalEffects (new main entry point for survival status effects)
+    - CLEAR: Each function has single responsibility - simulation, events, or status effects
+
 ===============================================================================
 */
 
+// Forward declarations
 class UNomadStatusEffectManagerComponent;
 class UNomadSurvivalHazardConfig;
+class UNomadSurvivalStatusEffect;
+
+// ----------------------------------------------------------------
+// Survival Severity Enum
+// ----------------------------------------------------------------
+/**
+ * ESurvivalSeverity
+ * -----------------
+ * Enum for different severity levels of survival status effects.
+ * Used to categorize the intensity of survival conditions.
+ */
+UENUM(BlueprintType)
+enum class ESurvivalSeverity : uint8
+{
+    None        UMETA(DisplayName = "None"),
+    Mild        UMETA(DisplayName = "Mild"),        // Early warning stage
+    Heavy       UMETA(DisplayName = "Heavy"),       // Moderate penalty stage  
+    Severe      UMETA(DisplayName = "Severe"),      // Critical stage with major penalties
+    Extreme     UMETA(DisplayName = "Extreme")      // Life-threatening stage
+};
 
 // ----------------------------------------------------------------
 // Temperature unit enum for UDS external readings
@@ -174,6 +207,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnSurvivalNotification, FString,
  * All tuning variables are now sourced from the DataAsset (SurvivalConfig).
  * All cooldowns and warning thresholds are now configurable via DataAsset.
  * All time-based logic uses UDS-provided in-game time for synchrony.
+ * 
+ * NEW (2025-07-17): Dual status effect system with data-driven survival effects
  */
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class NOMADDEV_API UNomadSurvivalNeedsComponent : public UActorComponent
@@ -497,7 +532,7 @@ private:
      */
     bool ShouldSlowMovement(const FCachedStatValues& Values) const;
 
-    // Simulation helpers (all called from OnMinuteTick):
+    // ======== Core Simulation Helpers ========
     
     /**
      * Normalizes the given temperature to [0,1] using climate config.
@@ -544,46 +579,112 @@ private:
      */
     void ApplyDecayToStats(float HungerDecay, float ThirstDecay) const;
 
+    // ======== Event System (State Transitions & Warnings) ========
+
     /**
      * Fires starvation/dehydration events on stat threshold crossings using cached values.
+     * Handles state change events (OnStarvationStarted/Ended, OnDehydrationStarted/Ended).
+     * Does NOT apply status effects - that's handled by EvaluateAndApplySurvivalEffects.
      * @param CachedValues  Pre-calculated stat values.
      */
     void EvaluateSurvivalStateTransitions(const FCachedStatValues& CachedValues);
 
     /**
-     * Fires movement slow/recover events based on hunger/thirst levels using cached values.
-     * @param CachedValues  Pre-calculated stat values.
-     */
-    void EvaluateMovementSlowState(const FCachedStatValues& CachedValues);
-
-    /**
      * Checks for and fires hazard warnings (heatstroke, hypothermia) using cached values.
+     * Manages internal warning state flags for temperature hazards.
+     * Actual warning broadcasts happen in MaybeFireXXXWarning() functions.
      * @param CachedValues  Pre-calculated stat values.
      */
     void EvaluateWeatherHazards(const FCachedStatValues& CachedValues);
 
     /**
      * Main body temperature simulation using cached values.
+     * Handles physics-based body temperature changes and exposure counters.
+     * Fires temperature hazard start/end events (OnHeatstrokeStarted/Ended, OnHypothermiaStarted/Ended).
      * @param AmbientTempCelsius  Current ambient temperature (converted to Celsius if needed).
      * @param CachedValues  Pre-calculated stat values.
      */
     void UpdateBodyTemperature(float AmbientTempCelsius, const FCachedStatValues& CachedValues);
     
     /**
-     * Evaluates and updates player's overall survival state using cached values.
+     * Evaluates and updates player's overall survival state for UI using cached values.
+     * RENAMED FROM: EvaluateAndUpdateSurvivalState (clearer naming - this is UI-only).
+     * Updates CurrentSurvivalState enum for client UI display.
      * @param CachedValues  Pre-calculated stat values.
      */
-    void EvaluateAndUpdateSurvivalState(const FCachedStatValues& CachedValues);
+    void UpdateSurvivalUIState(const FCachedStatValues& CachedValues);
+
+    // ======== Status Effect System (NEW - 2025-07-17) ========
 
     /**
-     * Applies a status effect using the ACF status effect system if a valid class is provided.
+     * NEW: Main entry point for survival status effect evaluation.
+     * Evaluates current survival conditions and applies/removes appropriate status effects.
+     * Replaces the old manual attribute manipulation system with data-driven status effects.
+     * Called from OnMinuteTick after stat updates.
+     * @param CachedValues  Pre-calculated stat values.
      */
-    void TryApplyStatusEffect(const TSubclassOf<UNomadBaseStatusEffect>& InStatusEffectClass, float InDoTPercent) const;
+    void EvaluateAndApplySurvivalEffects(const FCachedStatValues& CachedValues);
 
     /**
-     * Removes a status effect from the character by GameplayTag using the ACF status effect system.
+     * NEW: Evaluates hunger levels and applies appropriate starvation effects.
+     * Handles both mild hunger warnings and severe starvation with DoT.
+     * Uses data-driven UNomadSurvivalStatusEffect classes with config-based attribute modifiers.
+     * @param HungerLevel Current hunger stat value.
+     */
+    void EvaluateHungerEffects(float HungerLevel);
+
+    /**
+     * NEW: Evaluates thirst levels and applies appropriate dehydration effects.
+     * Handles both mild thirst warnings and severe dehydration with DoT.
+     * Uses data-driven UNomadSurvivalStatusEffect classes with config-based attribute modifiers.
+     * @param ThirstLevel Current thirst stat value.
+     */
+    void EvaluateThirstEffects(float ThirstLevel);
+
+    /**
+     * NEW: Evaluates body temperature and applies appropriate temperature effects.
+     * Handles both heatstroke and hypothermia with multiple severity levels.
+     * Uses data-driven UNomadSurvivalStatusEffect classes with config-based attribute modifiers.
+     * @param BodyTemp Current body temperature stat value.
+     */
+    void EvaluateTemperatureEffects(float BodyTemp);
+
+    /**
+     * NEW: Applies a survival status effect using the ACF status effect system.
+     * Automatically sets appropriate severity and DoT values based on config.
+     * Uses UNomadSurvivalStatusEffect with data-driven attribute modifiers.
+     * @param EffectClass Status effect class to apply.
+     * @param Severity Severity level for visual/audio effects.
+     * @param DoTPercent Damage over time percentage (0.0 for no DoT).
+     */
+    void ApplyStatusEffect(TSubclassOf<UNomadSurvivalStatusEffect> EffectClass, ESurvivalSeverity Severity, float DoTPercent = 0.0f);
+
+    /**
+     * NEW: Removes all active survival status effects.
+     * Called when conditions improve or for cleanup during state transitions.
+     */
+    void RemoveAllSurvivalEffects();
+
+    // ======== Legacy Status Effect System (Compatibility) ========
+
+    /**
+     * LEGACY: Applies a generic status effect using the ACF status effect system.
+     * Used for compatibility with existing temperature hazard system.
+     * For new survival effects, use ApplyStatusEffect instead.
+     * @param InStatusEffectClass Status effect class to apply.
+     * @param InDoTPercent Damage over time percentage.
+     */
+    void ApplyGenericStatusEffect(const TSubclassOf<UNomadBaseStatusEffect>& InStatusEffectClass, float InDoTPercent) const;
+
+    /**
+     * LEGACY: Removes a status effect from the character by GameplayTag.
+     * Used for compatibility with existing temperature hazard system.
+     * For new survival effects, use RemoveAllSurvivalEffects instead.
+     * @param StatusEffectTag Gameplay tag of the effect to remove.
      */
     void TryRemoveStatusEffect(FGameplayTag StatusEffectTag) const;
+
+    // ======== Warning System ========
 
     /**
      * Cooldown-based warning helpers using cached values.
@@ -592,15 +693,18 @@ private:
     void MaybeFireDehydrationWarning(float CurrentInGameTime, float CurrentThirst);
     void MaybeFireHeatstrokeWarning(float CurrentInGameTime, float InBodyTemperature);
     void MaybeFireHypothermiaWarning(float CurrentInGameTime, float InBodyTemperature);
-    // Helper function for escalating warnings
+
+    /** Helper function for escalating warnings */
     UFUNCTION()
     bool ShouldFireEscalatingWarning(const FString& WarningType, float CurrentTime, float BaseCooldown, int32& WarningCount);
 
-    // Helper function to broadcast notifications
+    /** Helper function to broadcast notifications */
     UFUNCTION()
     void BroadcastSurvivalNotification(const FString& NotificationText, const FLinearColor& Color, float Duration = 3.0f) const;
 
-    // Helper functions for state checks using cached values.
+    // ======== State Check Helpers ========
+
+    /** Helper functions for state checks using cached values. */
     bool IsStarving(float CachedHunger) const;
     bool IsHungry(float CachedHunger) const;
     bool IsDehydrated(float CachedThirst) const;
@@ -608,4 +712,3 @@ private:
     bool IsHeatstroke(float CachedBodyTemp) const;
     bool IsHypothermic(float CachedBodyTemp) const;
 };
-

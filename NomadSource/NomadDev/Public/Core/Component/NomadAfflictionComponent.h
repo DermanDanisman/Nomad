@@ -5,146 +5,180 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
+#include "Core/StatusEffect/NomadStatusTypes.h"
 #include "NomadAfflictionComponent.generated.h"
 
 class UNomadStatusEffectConfigBase;
+class UNomadStatusEffectManagerComponent;
 
 /**
- * Enum: ENomadAfflictionNotificationType
- * --------------------------------------
- * Describes the type of affliction notification event.
- * Used to communicate the reason or context for an affliction state change.
- * This allows UI and systems to react appropriately (e.g. play a different sound for "Removed" vs "Expired").
- */
-UENUM(BlueprintType)
-enum class ENomadAfflictionNotificationType : uint8
-{
-    Applied         UMETA(DisplayName="Applied"),        // Affliction was newly applied
-    Refreshed       UMETA(DisplayName="Refreshed"),      // Duration or effect was refreshed
-    Stacked         UMETA(DisplayName="Stacked"),        // Additional stack was added
-    Unstacked       UMETA(DisplayName="Unstacked"),      // Stack was removed
-    Removed         UMETA(DisplayName="Removed"),        // Affliction was manually removed (e.g. by cleanse)
-    Expired         UMETA(DisplayName="Expired"),        // Affliction expired naturally (duration elapsed)
-    Cleansed        UMETA(DisplayName="Cleansed"),       // Affliction was removed by a cleansing effect
-    Immune          UMETA(DisplayName="Immune"),         // Application failed due to immunity
-    Overwritten     UMETA(DisplayName="Overwritten"),    // Affliction was replaced/overwritten by another
-    Custom          UMETA(DisplayName="Custom")          // Custom/unspecified change
-};
-
-/**
- * Struct: FNomadAfflictionNotificationContext
- * -------------------------------------------
- * Provides complete context for an affliction notification event.
- * Used by UI to display popups/toasts and to drive detailed feedback.
- * Contains all relevant info about the change, including before/after stack count, icon, color, and a message.
+ * FNomadAfflictionNotificationContext
+ * -----------------------------------
+ * Complete context for an affliction notification event.
+ * Used by UI to display popups/toasts and drive detailed feedback.
+ * Contains all relevant info about the change, including before/after stack count, icon, color, and message.
  */
 USTRUCT(BlueprintType)
-struct FNomadAfflictionNotificationContext {
+struct NOMADDEV_API FNomadAfflictionNotificationContext
+{
     GENERATED_BODY()
 
-    /** GameplayTag identifying the specific affliction/status effect. Used as the unique key. */
-    UPROPERTY(BlueprintReadOnly)
+    /** GameplayTag identifying the specific affliction/status effect */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     FGameplayTag AfflictionTag;
 
-    /** The type of notification (see ENomadAfflictionNotificationType). */
-    UPROPERTY(BlueprintReadOnly)
+    /** The type of notification event */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     ENomadAfflictionNotificationType NotificationType;
 
-    /** Display name for UI, from config or fallback to tag name. */
-    UPROPERTY(BlueprintReadOnly)
+    /** Display name for UI, from config or fallback to tag name */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     FText DisplayName;
 
-    /** Main notification message for UI popups, based on event. */
-    UPROPERTY(BlueprintReadOnly)
+    /** Main notification message for UI popups */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     FText NotificationMessage;
 
-    /** Color for UI notification (e.g. red = debuff, green = cleanse). */
-    UPROPERTY(BlueprintReadOnly)
+    /** Color for UI notification */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     FLinearColor NotificationColor = FLinearColor::Red;
 
-    /** How long to display the notification (in seconds). */
-    UPROPERTY(BlueprintReadOnly)
-    float NotificationDuration = 4.f;
+    /** How long to display the notification (seconds) */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
+    float NotificationDuration = 4.0f;
 
-    /** Icon to display in UI, from config or fallback. */
-    UPROPERTY(BlueprintReadOnly)
+    /** Icon to display in UI */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     UTexture2D* NotificationIcon = nullptr;
 
-    /** Previous stack count (before change). Useful for stack up/down events. */
-    UPROPERTY(BlueprintReadOnly)
+    /** Previous stack count (before change) */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     int32 PreviousStacks = 0;
 
-    /** New stack count (after change). */
-    UPROPERTY(BlueprintReadOnly)
+    /** New stack count (after change) */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     int32 NewStacks = 0;
 
-    /** Optional: Reason for notification (e.g. "Cleansed by potion"). */
-    UPROPERTY(BlueprintReadOnly)
+    /** Optional reason for notification */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
     FText Reason;
 
-    /** Default constructor, initializes members to safe defaults. */
+    /** Effect category for filtering and display */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
+    ENomadStatusCategory Category = ENomadStatusCategory::Neutral;
+
+    /** Effect type for UI behavior */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction")
+    EStatusEffectType EffectType = EStatusEffectType::Unknown;
+
+    /** Default constructor */
     FNomadAfflictionNotificationContext()
-        : AfflictionTag()
-        , NotificationType(ENomadAfflictionNotificationType::Custom)
-        , DisplayName()
-        , NotificationMessage()
-        , NotificationColor(FLinearColor::Red)
-        , NotificationDuration(4.f)
-        , NotificationIcon(nullptr)
-        , PreviousStacks(0)
-        , NewStacks(0)
-        , Reason()
-    {}
+    {
+        AfflictionTag = FGameplayTag();
+        NotificationType = ENomadAfflictionNotificationType::Applied;
+        DisplayName = FText();
+        NotificationMessage = FText();
+        NotificationColor = FLinearColor::Red;
+        NotificationDuration = 4.0f;
+        NotificationIcon = nullptr;
+        PreviousStacks = 0;
+        NewStacks = 0;
+        Reason = FText();
+        Category = ENomadStatusCategory::Neutral;
+        EffectType = EStatusEffectType::Unknown;
+    }
 };
 
 /**
- * Struct: FNomadAfflictionUIInfo
- * ------------------------------
- * Simple struct for summarizing affliction for UI widgets (icon, name, stack count).
- * Used for UI affliction bars, tooltips, etc.; does not include notification data.
+ * FNomadAfflictionUIInfo
+ * ----------------------
+ * Lightweight struct for UI widgets (icon bars, tooltips, etc.)
+ * Contains only essential display information.
  */
 USTRUCT(BlueprintType)
-struct FNomadAfflictionUIInfo
+struct NOMADDEV_API FNomadAfflictionUIInfo
 {
     GENERATED_BODY()
 
-    /** Tag for the affliction/status effect (unique identifier). */
-    UPROPERTY(BlueprintReadOnly)
+    /** Tag for the affliction/status effect */
+    UPROPERTY(BlueprintReadOnly, Category="UI")
     FGameplayTag AfflictionTag;
 
-    /** Number of stacks of this affliction (1 if not stackable). */
-    UPROPERTY(BlueprintReadOnly)
+    /** Number of stacks of this affliction */
+    UPROPERTY(BlueprintReadOnly, Category="UI")
     int32 StackCount = 1;
 
-    /** Icon to display (nullable). */
-    UPROPERTY(BlueprintReadOnly)
+    /** Icon to display */
+    UPROPERTY(BlueprintReadOnly, Category="UI")
     UTexture2D* Icon = nullptr;
 
-    /** Display name for the affliction (for UI display). */
-    UPROPERTY(BlueprintReadOnly)
+    /** Display name for the affliction */
+    UPROPERTY(BlueprintReadOnly, Category="UI")
     FText DisplayName;
+
+    /** Effect category for color coding */
+    UPROPERTY(BlueprintReadOnly, Category="UI")
+    ENomadStatusCategory Category = ENomadStatusCategory::Neutral;
+
+    /** Effect type for UI behavior */
+    UPROPERTY(BlueprintReadOnly, Category="UI")
+    EStatusEffectType EffectType = EStatusEffectType::Unknown;
+
+    /** Maximum stacks possible (for progress bars) */
+    UPROPERTY(BlueprintReadOnly, Category="UI")
+    int32 MaxStacks = 1;
+
+    /** Whether this effect can be manually removed */
+    UPROPERTY(BlueprintReadOnly, Category="UI")
+    bool bCanBeManuallyRemoved = false;
 };
 
-/** Delegate for broadcasting the full array of active afflictions to the UI.
- *  Widgets should bind to this and update their displays when notified.
- *  If bIsRemovalNotification is true, show removal popup only, do NOT update affliction bar.
- *  If false, update the bar/list with new state.
- */
+// =====================================================
+//                    DELEGATES
+// =====================================================
+
+/** Delegate for broadcasting notifications to UI widgets */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FAfflictionArrayNotification,
-    const TArray<FNomadAfflictionNotificationContext>&, AfflictionContexts
+    FAfflictionNotificationDelegate,
+    const FNomadAfflictionNotificationContext&, NotificationContext
 );
+
+/** Delegate for broadcasting the complete affliction state to UI */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FAfflictionStateDelegate,
+    const TArray<FNomadAfflictionUIInfo>&, AfflictionState
+);
+
+/** Delegate for category-specific updates (buffs/debuffs separately) */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FAfflictionCategoryDelegate,
+    ENomadStatusCategory, Category,
+    const TArray<FNomadAfflictionUIInfo>&, CategoryAfflictions
+);
+
+// =====================================================
+//              CLASS DECLARATION
+// =====================================================
 
 /**
  * UNomadAfflictionComponent
- * -------------------------------------------------------
- * UI-facing component for tracking and broadcasting all active afflictions/status effects.
- * Responsibilities:
- * - Maintains an array of active afflictions, including stack counts and rich metadata.
- * - Looks up config assets for notification data (icon, color, name, etc.).
- * - Broadcasts all changes to UI via OnAfflictionArrayNotification.
- * - Pure UI: no replication or core gameplay logic, only frontend state.
- * - All updates should go through UpdateAfflictionArray().
+ * -------------------------
+ * Enhanced UI-facing component for tracking and broadcasting status effect changes.
+ * 
+ * Key Features:
+ * - Maintains active affliction state for UI display
+ * - Provides rich notification context for popups/toasts
+ * - Supports category-based filtering (buffs vs debuffs)
+ * - Integrates seamlessly with the status effect manager
+ * - Handles config lookup for UI data (icons, colors, names)
+ * - Optimized for UI performance with lightweight structs
+ * 
+ * Design Philosophy:
+ * - Pure UI component - no gameplay logic
+ * - Event-driven updates from status effect manager
+ * - Rich context for sophisticated UI feedback
+ * - Supports both immediate notifications and persistent state
+ * - Designer-friendly with config asset integration
  */
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class NOMADDEV_API UNomadAfflictionComponent : public UActorComponent
@@ -155,26 +189,43 @@ public:
     // =====================================================
     //         CONSTRUCTOR & INITIALIZATION
     // =====================================================
-    /** Standard constructor. Disables ticking and replication since this is UI-only. */
+
+    /** Constructor - sets up UI-only component */
     UNomadAfflictionComponent();
 
     // =====================================================
-    //         AFFLICTION STATE UPDATE & NOTIFICATIONS
+    //         MANAGER INTEGRATION (MISSING FUNCTION)
+    // =====================================================
+
+    /** 
+     * Called by status effect manager when active effects change.
+     * This was the missing function that caused the error!
+     */
+    UFUNCTION(BlueprintCallable, Category="Affliction|Manager Integration")
+    void OnActiveEffectsChanged();
+
+    /** 
+     * Syncs with the status effect manager to rebuild UI state.
+     * Called during initialization and when needed.
+     */
+    UFUNCTION(BlueprintCallable, Category="Affliction|Manager Integration")
+    void SyncWithStatusEffectManager();
+
+    // =====================================================
+    //         AFFLICTION STATE MANAGEMENT
     // =====================================================
 
     /**
-     * Updates the array of afflictions and broadcasts the new state.
-     * - Handles all affliction changes (apply, stack, remove, cleanse, etc.).
-     * - Notifies the UI with the new context and rich data.
-     * - Always call this for affliction changes; never update ActiveAfflictions directly.
-     *
-     * @param AfflictionTag      The gameplay tag identifying the affliction.
-     * @param NotificationType   What kind of change this is (applied, stacked, removed, etc.).
-     * @param PreviousStacks     Stack count before the change.
-     * @param NewStacks          Stack count after the change.
-     * @param Reason             Optional text explaining the reason (for detailed feedback).
+     * Updates affliction state and broadcasts notifications.
+     * Called by the status effect manager for all status changes.
+     * 
+     * @param AfflictionTag      Tag identifying the affliction
+     * @param NotificationType   Type of change (applied, removed, stacked, etc.)
+     * @param PreviousStacks     Stack count before change
+     * @param NewStacks          Stack count after change
+     * @param Reason             Optional reason text for detailed feedback
      */
-    UFUNCTION(BlueprintCallable, Category="Affliction")
+    UFUNCTION(BlueprintCallable, Category="Affliction|State")
     void UpdateAfflictionArray(
         FGameplayTag AfflictionTag,
         ENomadAfflictionNotificationType NotificationType,
@@ -184,29 +235,51 @@ public:
     );
 
     /**
-     * Removes an affliction entry by tag, used for stack loss edge cases.
-     * - Returns true if removed.
+     * Removes an affliction by tag (used for cleanup).
+     * Returns true if the affliction was found and removed.
      */
+    UFUNCTION(BlueprintCallable, Category="Affliction|State")
     bool RemoveAfflictionByTag(FGameplayTag AfflictionTag);
+
+    /**
+     * Clears all afflictions (used on respawn, level change, etc.)
+     */
+    UFUNCTION(BlueprintCallable, Category="Affliction|State")
+    void ClearAllAfflictions();
+
+    // =====================================================
+    //         UI DATA ACCESSORS
+    // =====================================================
+
+    /** Returns lightweight UI info for all active afflictions */
+    UFUNCTION(BlueprintPure, Category="Affliction|UI")
+    TArray<FNomadAfflictionUIInfo> GetAfflictionUIInfoArray() const;
+
+    /** Returns UI info filtered by category (buffs, debuffs, neutral) */
+    UFUNCTION(BlueprintPure, Category="Affliction|UI")
+    TArray<FNomadAfflictionUIInfo> GetAfflictionsByCategory(ENomadStatusCategory Category) const;
+
+    /** Returns UI info filtered by effect type (timed, infinite, etc.) */
+    UFUNCTION(BlueprintPure, Category="Affliction|UI")
+    TArray<FNomadAfflictionUIInfo> GetAfflictionsByType(EStatusEffectType EffectType) const;
+
+    /** Gets specific affliction info by tag */
+    UFUNCTION(BlueprintPure, Category="Affliction|UI")
+    bool GetAfflictionInfo(FGameplayTag AfflictionTag, FNomadAfflictionUIInfo& OutInfo) const;
+
+    /** Returns count of active afflictions by category */
+    UFUNCTION(BlueprintPure, Category="Affliction|UI")
+    int32 GetAfflictionCountByCategory(ENomadStatusCategory Category) const;
 
     // =====================================================
     //         CONFIGURATION & DATA LOOKUP
     // =====================================================
 
     /**
-     * Looks up the config for the affliction and fills out all UI notification data.
-     * - Returns icon, color, name, message, and duration, based on event type.
-     * - If no config is found, uses generic fallback values.
-     *
-     * @param AfflictionTag            The gameplay tag for the effect.
-     * @param NotificationType         What kind of UI event (applied, removed, etc.).
-     * @param OutDisplayName           [out] UI display name (from config or tag).
-     * @param OutNotificationMessage   [out] UI message (from config or fallback).
-     * @param OutColor                 [out] Message color (config or fallback).
-     * @param OutDuration              [out] Display duration (config or fallback).
-     * @param OutIcon                  [out] Icon pointer (config or nullptr).
+     * Looks up notification data from config assets.
+     * Provides all UI information needed for rich notifications.
      */
-    UFUNCTION(BlueprintCallable, Category="Affliction")
+    UFUNCTION(BlueprintCallable, Category="Affliction|Config")
     void GetAfflictionNotificationData(
         FGameplayTag AfflictionTag,
         ENomadAfflictionNotificationType NotificationType,
@@ -217,34 +290,78 @@ public:
         UTexture2D*& OutIcon
     ) const;
 
-    /**
-     * Returns the status effect config asset for a given gameplay tag.
-     * - If not found, returns nullptr and fallback logic will be used.
-     * - Used for all UI lookups (icon, name, color, etc.).
-     */
+    /** Finds config asset for a given tag */
+    UFUNCTION(BlueprintPure, Category="Affliction|Config")
     const UNomadStatusEffectConfigBase* GetStatusEffectConfigForTag(FGameplayTag AfflictionTag) const;
 
     // =====================================================
-    //         UI DATA ACCESSORS
+    //         EVENT DELEGATES
     // =====================================================
 
-    /** Broadcasts current affliction array to UI. Widgets should bind to this for real-time updates. */
-    UPROPERTY(BlueprintAssignable, Category="Affliction|Notifications")
-    FAfflictionArrayNotification OnAfflictionArrayNotification;
+    /** Broadcasts individual notifications (for popups/toasts) */
+    UPROPERTY(BlueprintAssignable, Category="Affliction|Events")
+    FAfflictionNotificationDelegate OnAfflictionNotification;
 
-    /** Array of all effect configs to search by tag. Set in editor (designer must keep up to date). */
-    UPROPERTY(EditDefaultsOnly, Category="Affliction|Config")
+    /** Broadcasts complete affliction state (for status bars) */
+    UPROPERTY(BlueprintAssignable, Category="Affliction|Events")
+    FAfflictionStateDelegate OnAfflictionStateChanged;
+
+    /** Broadcasts category-specific updates (buffs vs debuffs) */
+    UPROPERTY(BlueprintAssignable, Category="Affliction|Events")
+    FAfflictionCategoryDelegate OnAfflictionCategoryChanged;
+
+    // =====================================================
+    //         CONFIGURATION
+    // =====================================================
+
+    /** Array of all effect configs for tag lookup (set by designer) */
+    UPROPERTY(EditDefaultsOnly, Category="Affliction|Configuration", meta=(
+        ToolTip="Array of all status effect configs for UI data lookup"))
     TArray<TObjectPtr<UNomadStatusEffectConfigBase>> EffectConfigs;
 
-    /** The current array of active afflictions (with rich metadata). Used by UI. */
-    UPROPERTY(BlueprintReadOnly, Category="Affliction")
+    /** Whether to automatically sync with manager on BeginPlay */
+    UPROPERTY(EditAnywhere, Category="Affliction|Configuration", meta=(
+        ToolTip="Automatically sync with status effect manager when component starts"))
+    bool bAutoSyncOnBeginPlay = true;
+
+    /** Whether to show notifications for neutral effects */
+    UPROPERTY(EditAnywhere, Category="Affliction|Configuration", meta=(
+        ToolTip="Show UI notifications for neutral category effects"))
+    bool bShowNeutralNotifications = true;
+
+protected:
+    // =====================================================
+    //         COMPONENT LIFECYCLE
+    // =====================================================
+
+    virtual void BeginPlay() override;
+
+    // =====================================================
+    //         INTERNAL STATE
+    // =====================================================
+
+    /** Current active afflictions with full context */
+    UPROPERTY(BlueprintReadOnly, Category="Affliction|State")
     TArray<FNomadAfflictionNotificationContext> ActiveAfflictions;
 
-    /**
-     * Returns a UI-friendly summary array (icon, name, stack count) for widgets.
-     * - Intended for icon bars, tooltips, etc.
-     * - More lightweight than full notification context.
-     */
-    UFUNCTION(BlueprintPure, Category="Affliction|UI")
-    TArray<FNomadAfflictionUIInfo> GetAfflictionUIInfoArray() const;
+    /** Cached reference to status effect manager */
+    UPROPERTY()
+    TObjectPtr<UNomadStatusEffectManagerComponent> StatusEffectManager;
+
+private:
+    // =====================================================
+    //         INTERNAL HELPERS
+    // =====================================================
+
+    /** Finds active affliction index by tag */
+    int32 FindAfflictionIndex(FGameplayTag AfflictionTag) const;
+
+    /** Creates UI info from notification context */
+    FNomadAfflictionUIInfo CreateUIInfoFromContext(const FNomadAfflictionNotificationContext& Context) const;
+
+    /** Broadcasts state change events */
+    void BroadcastStateChanges();
+
+    /** Gets enhanced info from status effect manager */
+    void EnhanceContextWithManagerData(FNomadAfflictionNotificationContext& Context) const;
 };

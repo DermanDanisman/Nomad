@@ -17,12 +17,17 @@ class ACharacter;
 // Canonical tag for health stat modifications
 static const FGameplayTag Health = FGameplayTag::RequestGameplayTag(TEXT("RPG.Statistics.Health"));
 
+/**
+ * EEffectLifecycleState
+ * ---------------------
+ * Tracks the current lifecycle state of a status effect for proper cleanup and state management.
+ */
 UENUM(BlueprintType)
 enum class EEffectLifecycleState : uint8
 {
-    Active,     // Effect is running
+    Active,     // Effect is running normally
     Ending,     // Effect is being cleaned up
-    Removed     // Effect is fully finished/cleaned
+    Removed     // Effect is fully finished/cleaned up
 };
 
 // =====================================================
@@ -31,28 +36,24 @@ enum class EEffectLifecycleState : uint8
 
 /**
  * UNomadBaseStatusEffect
- * -----------------------------------------------------
+ * ----------------------
  * Abstract base class for all Nomad status effects.
  * 
- * Key features and responsibilities:
- *  - Data-driven: All gameplay and UI configuration comes from a config asset (BaseConfig).
- *  - Integration: Extends the ACF status effect system with Nomad-specific logic (tag, icons, category, sounds).
- *  - Audio/Visual: Handles start/end sound playback and exposes hooks for visual/audio cues.
- *  - Categorization: Every status effect can be sorted/categorized for UI, logic, or filtering.
- *  - Initialization: Prevents double-init and makes sure config is loaded/applied before effect logic runs.
- *  - **Hybrid system ready:** Each effect can apply via stat modification, damage event, or both, as set in config.
+ * Key Features:
+ * - Data-driven: All configuration comes from config assets
+ * - Integration: Extends ACF with Nomad-specific functionality
+ * - Hybrid System: Supports stat modification, damage events, or both
+ * - Audio/Visual: Handles sound playback and visual effect hooks
+ * - Categorization: Effects can be categorized for UI and filtering
+ * - Lifecycle Management: Proper initialization and cleanup
+ * - Blocking Tags: Can block certain actions (like sprinting)
  * 
- * Design notes:
- *  - The effect itself is **not** responsible for UI notification/affliction popups. Only the manager triggers UI.
- *  - All config-driven properties are **read at runtime** from the config asset, supporting easy tuning.
- *  - Blueprint designers should always subclass this, not ACFBaseStatusEffect directly.
- *  
- * ===============================================
- *     NomadBaseStatusEffect (Hybrid System Ready)
- * ===============================================
- *
- * This is the abstract base class for all Nomad status effects—timed, instant, infinite.
- * It supports the hybrid system for stat mods and damage events, as defined in the config asset.
+ * Design Philosophy:
+ * - Effects are data-driven via config assets
+ * - No UI logic in effects themselves (handled by manager)
+ * - Blueprint-friendly with implementable events
+ * - Supports damage causers for analytics and kill credit
+ * - Thread-safe initialization prevents double-init
  */
 UCLASS(Abstract, BlueprintType, Blueprintable, meta=(DisplayName="Nomad Base Status Effect"))
 class NOMADDEV_API UNomadBaseStatusEffect : public UACFBaseStatusEffect
@@ -67,18 +68,21 @@ public:
     /** Default constructor: initializes runtime state. */
     UNomadBaseStatusEffect();
 
-    UFUNCTION(BlueprintCallable, Category = "Nomad Status Effect | Getters")
-    EEffectLifecycleState GetEffectLifecycleState() const
-    { return EffectState; }
+    // =====================================================
+    //         LIFECYCLE STATE MANAGEMENT
+    // =====================================================
 
+    /** Gets the current lifecycle state of this effect. */
+    UFUNCTION(BlueprintCallable, Category = "Nomad Status Effect | Getters")
+    EEffectLifecycleState GetEffectLifecycleState() const { return EffectState; }
+
+    /** Sets the lifecycle state (used internally for state transitions). */
     UFUNCTION(BlueprintCallable, Category = "Nomad Status Effect | Setters")
     void SetEffectLifecycleState(const EEffectLifecycleState NewState) { EffectState = NewState; }
 
+    /** Sets the actor responsible for this effect (for damage attribution). */
     UFUNCTION(BlueprintCallable, Category = "Nomad Status Effect | Setters")
-    void SetDamageCauser(AActor* Causer)
-    {
-        DamageCauser = Causer;
-    }
+    void SetDamageCauser(AActor* Causer) { DamageCauser = Causer; }
 
     // =====================================================
     //         DATA-DRIVEN CONFIGURATION
@@ -86,30 +90,31 @@ public:
 
     /**
      * The configuration asset containing all gameplay/UI parameters for this effect.
-     * - Should point to a UNomadStatusEffectConfigBase (BP or C++).
-     * - If set, overrides any hardcoded properties.
-     * - Loaded synchronously at runtime if not already loaded.
-     * - Allows multiple effect instances to share config.
-     * - **Hybrid:** Determines application mode for stat/damage/both.
+     * - Should point to a UNomadStatusEffectConfigBase (or derived class)
+     * - Overrides any hardcoded properties when set
+     * - Loaded synchronously at runtime
+     * - Supports sharing config between multiple effect instances
+     * - Determines application mode for hybrid stat/damage system
      */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Nomad Status Effect | Configuration")
     TSoftObjectPtr<UNomadStatusEffectConfigBase> EffectConfig;
 
 protected:
-
     // =====================================================
     //         RUNTIME STATE
     // =====================================================
 
-    /** True if this effect has already been initialized. Prevents accidental double-initialization. */
+    /** True if this effect has been properly initialized. Prevents double-initialization. */
     UPROPERTY(BlueprintReadOnly, Category="Nomad Status Effect | Runtime")
     bool bIsInitialized = false;
 
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Runtime")
-    void ApplySprintBlockTag(ACharacter* Character);
+    /** Current lifecycle state for safe cleanup and state tracking. */
+    UPROPERTY()
+    EEffectLifecycleState EffectState = EEffectLifecycleState::Removed;
 
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Runtime")
-    void RemoveSprintBlockTag(ACharacter* Character);
+    /** The actor responsible for causing this effect (may be nullptr for environmental effects). */
+    UPROPERTY()
+    TWeakObjectPtr<AActor> DamageCauser;
 
 public:
     // =====================================================
@@ -129,11 +134,11 @@ public:
     bool HasValidBaseConfiguration() const;
 
     // =====================================================
-    //         STATUS EFFECT PROPERTIES (Category, Tag, Icon)
+    //         STATUS EFFECT PROPERTIES
     // =====================================================
 
-    /** Returns the effect's gameplay category (debuff, buff, neutral, etc.). */
-    UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category="Nomad Status Effect | Status Effect")
+    /** Returns the effect's gameplay category (buff, debuff, neutral, etc.). */
+    UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category="Nomad Status Effect | Properties")
     ENomadStatusCategory GetStatusCategory() const;
     virtual ENomadStatusCategory GetStatusCategory_Implementation() const;
 
@@ -145,25 +150,37 @@ public:
     UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Configuration")
     void ApplyIconFromConfig();
 
-    /** Called to cleanly end the effect, ensuring correct state for removal and analytics. */
+    // =====================================================
+    //         EFFECT LIFECYCLE CONTROL
+    // =====================================================
+
+    /** Called to cleanly end the effect, ensuring proper state transitions. */
     void Nomad_OnStatusEffectEnds();
 
-    /** 
-     * Called to trigger standard activation logic (for scripting/BP/manual triggers).
-     * - Child classes should override to implement per-class startup.
-     * - This enables the manager to trigger effect logic without knowing the concrete subclass.
-     */
+    /** Called to trigger standard activation logic (enables polymorphic activation). */
     virtual void Nomad_OnStatusEffectStarts(ACharacter* Character);
+
+    // =====================================================
+    //         BLOCKING TAG UTILITIES
+    // =====================================================
+
+    /** Applies a sprint blocking tag to prevent sprinting while this effect is active. */
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
+    void ApplySprintBlockTag(ACharacter* Character);
+
+    /** Removes the sprint blocking tag when effect ends. */
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
+    void RemoveSprintBlockTag(ACharacter* Character);
 
 protected:
     // =====================================================
     //         ACF STATUS EFFECT OVERRIDES
     // =====================================================
 
-    /** Called when the effect starts on a character. Handles config, sound, and init state. */
+    /** Called when the effect starts on a character. Handles config loading and initialization. */
     virtual void OnStatusEffectStarts_Implementation(ACharacter* Character) override;
 
-    /** Called when the effect is removed from the character. Handles sound and cleanup. */
+    /** Called when the effect is removed from the character. Handles cleanup and sound. */
     virtual void OnStatusEffectEnds_Implementation() override;
 
     // =====================================================
@@ -188,41 +205,40 @@ protected:
     //         INITIALIZATION
     // =====================================================
 
-    /** Initializes the enhanced effect. Loads config, plays sound, and sets init state. */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Status Effect")
+    /** Initializes the Nomad effect with config loading and sound playback. */
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Initialization")
     virtual void InitializeNomadEffect();
 
     // =====================================================
-    //         HYBRID STAT/DAMAGE APPLICATION (Override in Derived)
+    //         HYBRID STAT/DAMAGE APPLICATION
     // =====================================================
 
     /**
-     * Applies this effect's main impact according to the hybrid system:
-     * - StatModification: applies stat mods only.
-     * - DamageEvent: applies via UE/ACF damage pipeline (requires DamageTypeClass).
-     * - Both: applies both.
-     * This function is to be called in OnStatusEffectStarts_Implementation, tick, etc.
-     * Override in subclasses for actual logic.
+     * Applies this effect's impact according to the hybrid system:
+     * - StatModification: applies stat mods only
+     * - DamageEvent: applies via UE damage pipeline
+     * - Both: applies both stat mods and damage events
+     * 
+     * Override in derived classes for specific implementation.
+     * 
+     * @param InStatMods Array of stat modifications to apply
+     * @param InTarget Target actor to apply effects to
+     * @param InEffectConfig Config object containing application settings
      */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Status Effect")
+    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Application")
     virtual void ApplyHybridEffect(const TArray<FStatisticValue>& InStatMods, AActor* InTarget, UObject* InEffectConfig);
 
-    /** Lifecycle state for safe cleanup and double-removal prevention */
-    UPROPERTY()
-    EEffectLifecycleState EffectState = EEffectLifecycleState::Removed;
+    // =====================================================
+    //         UTILITY FUNCTIONS
+    // =====================================================
 
-    /** The actor responsible for causing damage (environment, enemy, item, etc.). May be nullptr for environment or self effects. */
-    UPROPERTY()
-    TWeakObjectPtr<AActor> DamageCauser;
-    
-    /** Utility: Always returns a valid actor to use as Damage Causer, never nullptr. */
+    /** Returns a valid actor to use as damage causer, never returns nullptr. */
     FORCEINLINE AActor* GetSafeDamageCauser(AActor* Fallback) const
     {
         return (DamageCauser.IsValid() && !DamageCauser->IsPendingKillPending()) ? DamageCauser.Get() : Fallback;
     }
 
 private:
-    
     // =====================================================
     //         INTERNAL HELPERS
     // =====================================================
@@ -230,9 +246,9 @@ private:
     /** Loads and applies all config-driven values (tag, icon, etc). */
     void LoadConfigurationValues();
 
-    /** Loads and plays the configured start sound at the character's location (if set). */
+    /** Plays the configured start sound at the character's location. */
     void PlayStartSound();
 
-    /** Loads and plays the configured end sound at the character's location (if set). */
+    /** Plays the configured end sound at the character's location. */
     void PlayEndSound();
 };

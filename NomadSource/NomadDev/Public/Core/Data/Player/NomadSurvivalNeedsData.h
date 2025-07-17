@@ -7,8 +7,11 @@
 #include "Engine/DataAsset.h"
 #include "NomadSurvivalNeedsData.generated.h"
 
+// Forward declarations
 class UNomadBaseStatusEffect;
 class UACFBaseStatusEffect;
+class UNomadSurvivalStatusEffect;
+
 /**
  * Struct: FAdvancedSurvivalTempParams
  * -----------------------------------
@@ -111,10 +114,11 @@ struct FCurvesForAdvancedModifierTuning
  * Data Asset for all survival gameplay tuning parameters.
  * Designers edit these in editor; assign to character/component.
  * All variables are categorized and documented for clarity.
+ * 
+ * UPDATED (2025-07-17): Added new survival status effect class references for data-driven system
  */
 UCLASS(BlueprintType)
-class NOMADDEV_API UNomadSurvivalNeedsData : public UDataAsset
-{
+class NOMADDEV_API UNomadSurvivalNeedsData : public UDataAsset {
     GENERATED_BODY()
 
 public:
@@ -312,7 +316,7 @@ public:
     int HypothermiaDurationMinutes = 10;
 
     // =========================
-    // [Temperature Hazard Movement Slow - NEW]
+    // [Temperature Hazard Movement Slow - LEGACY (keeping for existing system)]
     // =========================
 
     /**
@@ -425,7 +429,7 @@ public:
     float HypothermiaExtremeStaminaMultiplier = 0.7f;
 
     // =========================
-    // [Hunger/Thirst Side-Effects]
+    // [Hunger/Thirst Side-Effects - LEGACY (keeping for existing system)]
     // =========================
 
     /**
@@ -569,58 +573,102 @@ public:
     FGameplayTag EnduranceStatTag;
     
     // =========================
-    // [Status Effects: Modular Survival Hazards]
+    // [Legacy Status Effects - KEEPING for compatibility]
     // =========================
 
     /**
      * Percent of max health lost per second when starving (0.005 = 0.5% per sec).
      * Designers set this in editor.
      */
-    UPROPERTY(EditAnywhere, Category="Survival|Status Effects", meta=(ClampMin="0.0", ClampMax="1.0"))
+    UPROPERTY(EditAnywhere, Category="Legacy|Status Effects", meta=(ClampMin="0.0", ClampMax="1.0"))
     float StarvationHealthDoTPercent = 0.005f;
 
     /**
      * Percent of max health lost per second when dehydrated (0.01 = 1% per sec).
      * Designers set this in editor.
      */
-    UPROPERTY(EditAnywhere, Category="Survival|Status Effects", meta=(ClampMin="0.0", ClampMax="1.0"))
+    UPROPERTY(EditAnywhere, Category="Legacy|Status Effects", meta=(ClampMin="0.0", ClampMax="1.0"))
     float DehydrationHealthDoTPercent = 0.01f;
 
     /** Status Effect applied when the player is starving (hunger depleted).
      *  This effect should be a debuff such as stamina drain, vision blur, etc.
      */
-    UPROPERTY(EditDefaultsOnly, Category="Survival|Status Effects")
+    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
     TSubclassOf<UNomadBaseStatusEffect> StarvationDebuffEffect;
 
     /** Status Effect applied when the player is dehydrated (thirst depleted).
      *  This effect should be a debuff such as health drain, stamina drain, etc.
      */
-    UPROPERTY(EditDefaultsOnly, Category="Survival|Status Effects")
+    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
     TSubclassOf<UNomadBaseStatusEffect> DehydrationDebuffEffect;
 
     /** Status Effect applied when the player is suffering from heatstroke (body temperature hazard).
      *  This effect could be stamina drain, vision blur, overheating, etc.
      */
-    UPROPERTY(EditDefaultsOnly, Category="Survival|Status Effects")
+    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
     TSubclassOf<UNomadBaseStatusEffect> HeatstrokeDebuffEffect;
 
     /** Status Effect applied when the player is hypothermic (body temperature hazard).
      *  This effect could be stamina drain, movement slow, frost effects, etc.
      */
-    UPROPERTY(EditDefaultsOnly, Category="Survival|Status Effects")
+    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
     TSubclassOf<UNomadBaseStatusEffect> HypothermiaDebuffEffect;
 
-    UPROPERTY(EditDefaultsOnly, Category="Survival|Status Effects")
+    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
     FGameplayTag StarvationDebuffTag;
 
-    UPROPERTY(EditDefaultsOnly, Category="Survival|Status Effects")
+    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
     FGameplayTag DehydrationDebuffTag;
 
-    UPROPERTY(EditDefaultsOnly, Category="Survival|Status Effects")
+    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
     FGameplayTag HeatstrokeDebuffTag;
 
-    UPROPERTY(EditDefaultsOnly, Category="Survival|Status Effects")
+    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
     FGameplayTag HypothermiaDebuffTag;
+
+    // =========================
+    // [NEW: Survival Status Effect Classes - Data-Driven System]
+    // =========================
+
+    /** NEW: Mild starvation effect (hunger below warning threshold) */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Starvation")
+    TSubclassOf<UNomadSurvivalStatusEffect> StarvationMildEffectClass;
+
+    /** NEW: Severe starvation effect (hunger at/below 0) */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Starvation")
+    TSubclassOf<UNomadSurvivalStatusEffect> StarvationSevereEffectClass;
+
+    /** NEW: Mild dehydration effect (thirst below warning threshold) */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Dehydration")
+    TSubclassOf<UNomadSurvivalStatusEffect> DehydrationMildEffectClass;
+
+    /** NEW: Severe dehydration effect (thirst at/below 0) */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Dehydration")
+    TSubclassOf<UNomadSurvivalStatusEffect> DehydrationSevereEffectClass;
+
+    /** NEW: Mild heatstroke effect */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
+    TSubclassOf<UNomadSurvivalStatusEffect> HeatstrokeMildEffectClass;
+
+    /** NEW: Heavy heatstroke effect */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
+    TSubclassOf<UNomadSurvivalStatusEffect> HeatstrokeHeavyEffectClass;
+
+    /** NEW: Extreme heatstroke effect */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
+    TSubclassOf<UNomadSurvivalStatusEffect> HeatstrokeExtremeEffectClass;
+
+    /** NEW: Mild hypothermia effect */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
+    TSubclassOf<UNomadSurvivalStatusEffect> HypothermiaMildEffectClass;
+
+    /** NEW: Heavy hypothermia effect */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
+    TSubclassOf<UNomadSurvivalStatusEffect> HypothermiaHeavyEffectClass;
+
+    /** NEW: Extreme hypothermia effect */
+    UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
+    TSubclassOf<UNomadSurvivalStatusEffect> HypothermiaExtremeEffectClass;
 
     /**
      * Advanced, non-linear tuning for all survival modifiers.
@@ -630,7 +678,7 @@ public:
     FCurvesForAdvancedModifierTuning AdvancedModifierCurves;
 
     // =========================
-    // [Blueprint Getters]
+    // [Blueprint Getters - EXISTING (keeping all)]
     // =========================
 
     // All getters are fully documented for BP/UMG access.
@@ -669,7 +717,7 @@ public:
     UFUNCTION(BlueprintPure, Category="Hazards|Thresholds") int32 GetHeatstrokeDurationMinutes() const { return HeatstrokeDurationMinutes; }
     UFUNCTION(BlueprintPure, Category="Hazards|Thresholds") int32 GetHypothermiaDurationMinutes() const { return HypothermiaDurationMinutes; }
 
-    // --- NEW: Temperature Hazard Movement Slow Getters ---
+    // --- Temperature Hazard Movement Slow Getters ---
     UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeMildThreshold() const { return HeatstrokeMildThreshold; }
     UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeHeavyThreshold() const { return HeatstrokeHeavyThreshold; }
     UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeExtremeThreshold() const { return HeatstrokeExtremeThreshold; }
@@ -720,8 +768,26 @@ public:
     UFUNCTION(BlueprintPure, Category="Tags") FGameplayTag GetBodyTempStatTag() const { return BodyTempStatTag; }
     UFUNCTION(BlueprintPure, Category="Tags") FGameplayTag GetEnduranceStatTag() const { return EnduranceStatTag; }
     
-    UFUNCTION(BlueprintPure, Category="Survival|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetStarvationDebuffEffect() const { return StarvationDebuffEffect; }
-    UFUNCTION(BlueprintPure, Category="Survival|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetDehydrationDebuffEffect() const { return DehydrationDebuffEffect; }
-    UFUNCTION(BlueprintPure, Category="Survival|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetHeatstrokeDebuffEffect() const { return HeatstrokeDebuffEffect; }
-    UFUNCTION(BlueprintPure, Category="Survival|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetHypothermiaDebuffEffect() const { return HypothermiaDebuffEffect; }
+    // Legacy getters
+    UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetStarvationDebuffEffect() const { return StarvationDebuffEffect; }
+    UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetDehydrationDebuffEffect() const { return DehydrationDebuffEffect; }
+    UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetHeatstrokeDebuffEffect() const { return HeatstrokeDebuffEffect; }
+    UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetHypothermiaDebuffEffect() const { return HypothermiaDebuffEffect; }
+
+    // =========================
+    // [NEW: Status Effect Class Getters]
+    // =========================
+    
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetStarvationMildEffectClass() const { return StarvationMildEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetStarvationSevereEffectClass() const { return StarvationSevereEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetDehydrationMildEffectClass() const { return DehydrationMildEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetDehydrationSevereEffectClass() const { return DehydrationSevereEffectClass; }
+    
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeMildEffectClass() const { return HeatstrokeMildEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeHeavyEffectClass() const { return HeatstrokeHeavyEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeExtremeEffectClass() const { return HeatstrokeExtremeEffectClass; }
+    
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaMildEffectClass() const { return HypothermiaMildEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaHeavyEffectClass() const { return HypothermiaHeavyEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaExtremeEffectClass() const { return HypothermiaExtremeEffectClass; }
 };

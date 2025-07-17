@@ -13,52 +13,23 @@ class UNiagaraSystem;
 class UParticleSystem;
 class USoundBase;
 
-UENUM(BlueprintType)
-enum class EStatusEffectApplicationMode : uint8
-{
-    StatModification UMETA(DisplayName = "Stat Modification"),
-    DamageEvent      UMETA(DisplayName = "Damage Event"),
-    Both             UMETA(DisplayName = "Both (rare)")
-};
-
 /**
  * UNomadStatusEffectConfigBase
- * -------------------------------------------------
- * Base configuration asset for all Nomad status effects (buffs, debuffs, etc).
+ * ----------------------------
+ * Base configuration asset for all Nomad status effects.
  * 
  * Key Features:
- * - Data-driven: All gameplay, UI, notification, and audio/visual properties are defined here.
- * - Type-agnostic: Used as the parent for instant, timed, and infinite effect configs.
- * - Integrates with all Nomad effect classes and UI/notification systems.
- * - Designer-friendly: All properties are categorized and documented for easy tuning.
- * - Validation: Robust editor- and runtime-side validation and error reporting.
- * - Hybrid stat/damage pipeline: Supports direct stat mods, DamageType, or both per effect.
- *
- * =========================================
- *      Nomad Status Effect Config (Hybrid)
- * =========================================
- *
- * This configuration asset powers all Nomad status effects (buffs, debuffs, etc).
- *
- * === Hybrid System Overview ===
- * - ApplicationMode controls how the effect applies its main gameplay impact:
- *   - StatModification: Directly modifies stats (e.g. Health, Armor, etc) via the Stat Mod arrays.
- *   - DamageEvent: Applies damage through Unreal/ACF's damage system (respects resistances, triggers damage events).
- *   - Both: Applies both (use with caution—usually not needed).
- *
- * === IMPORTANT for DamageEvent Mode ===
- * - When ApplicationMode is DamageEvent (or Both), you MUST fill out the DamageStatisticMods array:
- *     - Add at least one FStatisticValue with Statistic = Health (or appropriate stat tag), Value = damage amount (negative for damage).
- * - DamageTypeClass MUST be set (defines the type of damage, e.g. fire, poison).
- * - Stat mod arrays are ignored in DamageEvent mode (unless using Both).
- *
- * === Best Practices ===
- * - Only fill the arrays relevant for the selected ApplicationMode.
- * - Validation will warn/error if required fields are missing for the selected mode.
- * - Always use canonical GameplayTags (e.g. RPG.Statistics.Health) for stat modifications.
- * - Use negative values for damage (reduces health), positive for healing.
- *
- * See property tooltips for per-field documentation.
+ * - Data-driven: All gameplay, UI, and audio/visual properties
+ * - Type-agnostic: Parent for instant, timed, and infinite configs
+ * - Hybrid System: Supports stat modification, damage events, or both
+ * - Validation: Robust editor and runtime validation
+ * - Designer-friendly: Categorized and documented properties
+ * 
+ * Design Philosophy:
+ * - All values come from config assets, not hardcoded
+ * - Supports both Blueprint and C++ workflows
+ * - Comprehensive validation prevents common mistakes
+ * - Future-proof with hybrid application modes
  */
 UCLASS(Abstract, BlueprintType, meta=(DisplayName="Status Effect Config Base"))
 class NOMADDEV_API UNomadStatusEffectConfigBase : public UPrimaryDataAsset
@@ -68,191 +39,195 @@ class NOMADDEV_API UNomadStatusEffectConfigBase : public UPrimaryDataAsset
 public:
     UNomadStatusEffectConfigBase();
 
-    // ======== Basic Info ========
+    // =====================================================
+    //         BASIC INFORMATION
+    // =====================================================
 
     /** Display name for this effect (used in UI and notifications) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info", meta=(
+        ToolTip="The name shown to players in UI elements and notifications"))
     FText EffectName;
 
     /** Description shown in tooltips or notifications */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info", meta=(MultiLine=true))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info", meta=(
+        MultiLine=true, ToolTip="Detailed description for tooltips and help text"))
     FText Description;
 
     /** Icon shown in UI/notifications */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info", meta=(
+        ToolTip="Icon displayed in status bars and notifications"))
     TSoftObjectPtr<UTexture2D> Icon;
 
     /** Unique tag for this effect (required for stacking/removal and logic) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info", meta=(
+        ToolTip="Unique gameplay tag that identifies this effect"))
     FGameplayTag EffectTag;
 
     /** Category (Positive/Negative/Neutral) for UI, filtering, and logic */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Basic Info", meta=(
+        ToolTip="Category determines UI color coding and effect grouping"))
     ENomadStatusCategory Category = ENomadStatusCategory::Neutral;
 
-    // ======== Hybrid System: Damage/Stat Mod Application ========
+    // =====================================================
+    //         HYBRID APPLICATION SYSTEM
+    // =====================================================
 
     /** 
-     * How this effect should apply its main impact (stat modification, damage event, or both).
-     * StatModification: Direct stat changes (legacy/current system).
-     * DamageEvent: Uses DamageType and UE/ACF pipeline (futureproof, supports resistances/immunities).
-     * Both: Applies both; use with caution to avoid double-counting.
+     * How this effect applies its main impact.
+     * - StatModification: Direct stat changes (fast, simple)
+     * - DamageEvent: Uses UE damage pipeline (supports resistances, events)
+     * - Both: Applies both (use carefully to avoid double-counting)
      */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="ApplicationMode")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Application Mode", meta=(
+        ToolTip="Determines how the effect applies damage/healing/stat changes"))
     EStatusEffectApplicationMode ApplicationMode = EStatusEffectApplicationMode::StatModification;
 
     /** 
-     * (Optional) DamageType to use for DamageEvent or Both modes.
-     * If null, will not trigger UE/ACF damage pipeline.
+     * DamageType for DamageEvent or Both modes.
+     * Required when using damage events for proper resistance/immunity handling.
      */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="ApplicationMode", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification", EditConditionHides))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Application Mode", meta=(
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification", 
+        EditConditionHides, ToolTip="DamageType class for UE damage pipeline integration"))
     TSubclassOf<UDamageType> DamageTypeClass;
 
     /**
-     * Damage Stat Mods (for DamageEvent/Both modes)
-     *
-     * Used only when ApplicationMode is DamageEvent or Both.
-     * - Add one or more FStatisticValue entries with Statistic = Health (or similar), Value = amount to apply (negative for damage).
-     * - The value is passed to UGameplayStatics::ApplyDamage.
-     * - If empty, no damage will be applied and validation will fail.
-     *
-     * Example:
-     *   - Statistic: RPG.Statistics.Health
-     *   - Value: -50.f // deals 50 damage
+     * Damage/healing values for DamageEvent/Both modes.
+     * Use negative values for damage, positive for healing.
+     * Only affects Health stat in damage mode.
      */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="ApplicationMode | Stats", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification", EditConditionHides))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Application Mode", meta=(
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification", 
+        EditConditionHides, ToolTip="Stat modifications applied via damage events"))
     TArray<FStatisticValue> DamageStatisticMods;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hybrid Control")
-    bool bCustomDamageCalculation = false; // If true, use effect's custom damage logic
+    /** Use custom damage calculation instead of standard damage pipeline */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Application Mode", meta=(
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification",
+        ToolTip="Enable for effects that need special damage calculation logic"))
+    bool bCustomDamageCalculation = false;
 
-    // ======== Notification UI Overrides (optional) ========
-
-    /** Color for notification popups (optional; transparent = auto-color by category) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Notification", meta=(HideAlphaChannel))
-    FLinearColor NotificationColor = FLinearColor::Transparent;
-
-    /** Duration to show notification (optional, in seconds) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Notification", meta=(ClampMin="0.1", UIMin="0.1"))
-    float NotificationDuration = 4.f;
-
-    /** Custom message when effect is applied (optional) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Notification")
-    FText AppliedMessage;
-
-    /** Custom message when effect is removed (optional) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Notification")
-    FText RemovedMessage;
-
-    // ======== Behavior ========
+    // =====================================================
+    //         BEHAVIOR SETTINGS
+    // =====================================================
 
     /** Should show notifications for this effect? (UI popups, etc) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Behavior")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Behavior", meta=(
+        ToolTip="Whether to show UI notifications when effect is applied/removed"))
     bool bShowNotifications = true;
 
     /** Can this effect stack with itself? (multiple applications) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Behavior")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Behavior", meta=(
+        ToolTip="Allow multiple instances of this effect on the same target"))
     bool bCanStack = false;
 
     /** Maximum stacks if stacking is enabled (must be >= 1) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Behavior", meta=(EditCondition="bCanStack", ClampMin="1"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Behavior", meta=(
+        EditCondition="bCanStack", ClampMin="1", 
+        ToolTip="Maximum number of stacks allowed"))
     int32 MaxStackSize = 1;
-    
-    // ======== Blocking (Sprint, Jump, etc) ========
 
-    /** Tags that this effect blocks (e.g. Status.Block.Sprint, Status.Block.Jump, etc.) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Behavior | Blocking")
+    // =====================================================
+    //         BLOCKING SYSTEM
+    // =====================================================
+
+    /** Tags that this effect blocks (e.g. Status.Block.Sprint, Status.Block.Jump) */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Blocking", meta=(
+        ToolTip="Gameplay tags for actions this effect prevents"))
     FGameplayTagContainer BlockingTags;
 
-    // ======== Audio/Visual ========
+    // =====================================================
+    //         AUDIO/VISUAL EFFECTS
+    // =====================================================
 
     /** Sound played when effect starts (optional) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Audio/Visual")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Audio/Visual", meta=(
+        ToolTip="Audio cue played when effect begins"))
     TSoftObjectPtr<USoundBase> StartSound;
 
     /** Sound played when effect ends (optional) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Audio/Visual")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Audio/Visual", meta=(
+        ToolTip="Audio cue played when effect ends"))
     TSoftObjectPtr<USoundBase> EndSound;
 
-    /** Particle effect to attach to character (optional, legacy) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Audio/Visual")
+    /** Legacy particle effect (use Niagara for new effects) */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Audio/Visual", meta=(
+        ToolTip="Legacy Cascade particle system (deprecated, use Niagara)"))
     TSoftObjectPtr<UParticleSystem> AttachedEffect;
 
-    /** Niagara effect to attach to character (optional, modern) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Audio/Visual")
+    /** Modern Niagara effect to attach to character */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Audio/Visual", meta=(
+        ToolTip="Niagara effect system attached to character"))
     TSoftObjectPtr<UNiagaraSystem> AttachedNiagaraEffect;
 
-    // ======== Notification UI Helper Functions ========
+    // =====================================================
+    //         NOTIFICATION CUSTOMIZATION
+    // =====================================================
 
-    /** Returns the notification icon for this effect (loads or returns nullptr) */
+    /** Color for notification popups (transparent = auto-color by category) */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Notifications", meta=(
+        HideAlphaChannel, ToolTip="Custom color for notifications (leave transparent for auto-color)"))
+    FLinearColor NotificationColor = FLinearColor::Transparent;
+
+    /** Duration to show notification (seconds) */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Notifications", meta=(
+        ClampMin="0.1", UIMin="0.1", ToolTip="How long notifications are displayed"))
+    float NotificationDuration = 4.0f;
+
+    /** Custom message when effect is applied (optional) */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Notifications", meta=(
+        ToolTip="Custom text shown when effect is applied"))
+    FText AppliedMessage;
+
+    /** Custom message when effect is removed (optional) */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Notifications", meta=(
+        ToolTip="Custom text shown when effect is removed"))
+    FText RemovedMessage;
+
+    // =====================================================
+    //         UTILITY FUNCTIONS
+    // =====================================================
+
+    /** Returns the notification icon for this effect */
     UFUNCTION(BlueprintPure, Category="Status Effect Config")
-    UTexture2D* GetNotificationIcon() const
-    {
-        return Icon.IsValid() ? Icon.Get() : nullptr;
-    }
+    UTexture2D* GetNotificationIcon() const;
 
-    /** Returns the display name for this effect (for UI popups/tooltips) */
+    /** Returns the display name for this effect */
     UFUNCTION(BlueprintPure, Category="Status Effect Config")
-    FText GetNotificationDisplayName() const
-    {
-        return EffectName;
-    }
+    FText GetNotificationDisplayName() const { return EffectName; }
 
-    /** Returns the description for this effect (tooltips, etc) */
+    /** Returns the description for this effect */
     UFUNCTION(BlueprintPure, Category="Status Effect Config")
-    FText GetNotificationDescription() const
-    {
-        return Description;
-    }
+    FText GetNotificationDescription() const { return Description; }
 
-    /** Returns the notification color, or falls back to category color if unset */
+    /** Returns the notification color with fallback to category color */
     UFUNCTION(BlueprintPure, Category="Status Effect Config")
-    FLinearColor GetNotificationColor() const
-    {
-        // If a color is set, use it; otherwise, use category color.
-        return NotificationColor.A > 0 ? NotificationColor : (Category == ENomadStatusCategory::Negative ? FLinearColor::Red : FLinearColor::Green);
-    }
+    FLinearColor GetNotificationColor() const;
 
-    /** Returns the notification duration (seconds, default 4.0) */
+    /** Returns the notification duration */
     UFUNCTION(BlueprintPure, Category="Status Effect Config")
-    float GetNotificationDuration() const
-    {
-        return NotificationDuration > 0.f ? NotificationDuration : 4.f;
-    }
+    float GetNotificationDuration() const { return FMath::Max(0.1f, NotificationDuration); }
 
-    /** Returns the notification message for applied/removed (with fallback text) */
+    /** Returns the notification message with fallbacks */
     UFUNCTION(BlueprintPure, Category="Status Effect Config")
-    FText GetNotificationMessage(bool bWasAdded) const
-    {
-        if (bWasAdded && !AppliedMessage.IsEmpty())
-            return AppliedMessage;
-        if (!bWasAdded && !RemovedMessage.IsEmpty())
-            return RemovedMessage;
-        return bWasAdded
-            ? FText::Format(NSLOCTEXT("StatusEffect", "Applied", "You are now {0}!"), EffectName)
-            : FText::Format(NSLOCTEXT("StatusEffect", "Removed", "You recovered from {0}."), EffectName);
-    }
+    FText GetNotificationMessage(bool bWasAdded) const;
 
-    // ======== Utility Functions ========
-
-    /** Returns a brief type description for UI/debug (overridden in subclasses) */
+    /** Returns a brief type description (overridden in subclasses) */
     UFUNCTION(BlueprintPure, Category="Status Effect Config")
     virtual FText GetEffectTypeDescription() const { return FText::FromString(TEXT("Base Effect")); }
 
-    /** Runtime or editor validation: is this config valid for use? */
+    /** Runtime validation: is this config valid for use? */
     UFUNCTION(BlueprintCallable, Category="Status Effect Config")
     virtual bool IsConfigValid() const;
 
-    /** Returns all validation errors (used by editor, logs, etc) */
+    /** Returns all validation errors */
     UFUNCTION(BlueprintCallable, Category="Status Effect Config")
     virtual TArray<FString> GetValidationErrors() const;
 
 protected:
 #if WITH_EDITOR
-    /** Editor-only validation: respond to property changes for safety and auto-correction */
+    /** Editor validation and auto-correction */
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-    virtual EDataValidationResult IsDataValid(FDataValidationContext& Context) const override;
+    virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
 #endif
 };

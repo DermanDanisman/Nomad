@@ -6,7 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
 #include "NomadSurvivalHazardEffectConfig.generated.h"
-class UNomadHazardDoTStatusEffect;
+class UNomadSurvivalStatusEffect;
 
 /**
  * UNomadSurvivalHazardConfig
@@ -26,7 +26,7 @@ struct FNomadHazardConfigRow
     FGameplayTag HazardTag;
 
     UPROPERTY(EditDefaultsOnly, Category="Hazard")
-    TSubclassOf<UNomadHazardDoTStatusEffect> EffectClass;
+    TSubclassOf<UNomadSurvivalStatusEffect> EffectClass;
 
     UPROPERTY(EditDefaultsOnly, Category="Hazard")
     float DoTPercent = 0.f; // e.g. 0.005 for 0.5% per second

@@ -8,11 +8,10 @@ FNomadStatusEffect UNomadStatusTypes::CreateNomadStatusEffect(const FStatusEffec
     FNomadStatusEffect NomadEffect(ACFStatusEffect);
     NomadEffect.Category = Category;
 
-    // In future: Extract category from the effect instance itself if more dynamic logic is needed.
+    // Try to extract category from the effect instance itself if it's a Nomad effect
     if (UNomadBaseStatusEffect* NomadBaseEffect = Cast<UNomadBaseStatusEffect>(ACFStatusEffect.effectInstance))
     {
-        // Optionally, assign category from the effect's config if needed.
-        // For now, keeps provided Category parameter.
+        NomadEffect.Category = NomadBaseEffect->GetStatusCategory();
     }
 
     return NomadEffect;

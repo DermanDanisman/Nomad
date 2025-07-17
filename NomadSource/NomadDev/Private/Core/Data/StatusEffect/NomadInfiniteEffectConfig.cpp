@@ -6,6 +6,10 @@
 #include "Engine/Engine.h"
 #include "Misc/DataValidation.h"
 
+// =====================================================
+//         CONSTRUCTOR & INITIALIZATION
+// =====================================================
+
 UNomadInfiniteEffectConfig::UNomadInfiniteEffectConfig()
 {
     // Set default values for infinite effects
@@ -13,51 +17,77 @@ UNomadInfiniteEffectConfig::UNomadInfiniteEffectConfig()
     TickInterval = 5.0f;
     bCanBeManuallyRemoved = true;
     bPersistThroughSaveLoad = true;
+    
+    // Initialize chain effects
     bTriggerActivationChainEffects = false;
     bTriggerDeactivationChainEffects = false;
+    ActivationChainEffects.Empty();
+    DeactivationChainEffects.Empty();
+    
+    // Initialize UI settings
     bShowInfinitySymbolInUI = true;
     bShowTickNotifications = false;
     DisplayPriority = 50;
+    
+    // Initialize stat modifications
+    OnActivationStatModifications.Empty();
+    OnTickStatModifications.Empty();
+    OnDeactivationStatModifications.Empty();
+    
+    // Initialize persistent modifier with valid GUID
+    PersistentAttributeModifier = FAttributesSetModifier();
+    PersistentAttributeModifier.Guid = FGuid::NewGuid();
+    
+    // Set appropriate defaults for infinite effects
+    bCanStack = false;
     MaxStackSize = 1;
     bShowNotifications = true;
     Category = ENomadStatusCategory::Neutral;
-    PersistentAttributeModifier = FAttributesSetModifier();
-    PersistentAttributeModifier.Guid = FGuid::NewGuid();
-    DeveloperNotes = TEXT("Infinite duration status effect - persists until manually removed.");
-
-    // Hybrid
+    
+    // Hybrid system defaults
     ApplicationMode = EStatusEffectApplicationMode::StatModification;
     DamageTypeClass = nullptr;
+    
+    // Documentation
+    DeveloperNotes = TEXT("Infinite duration status effect - persists until manually removed.");
+    
+    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[CONFIG] Infinite effect config constructed"));
 }
+
+// =====================================================
+//         VALIDATION SYSTEM
+// =====================================================
 
 bool UNomadInfiniteEffectConfig::IsConfigValid() const
 {
+    // Start with base validation
     if (!Super::IsConfigValid())
     {
         return false;
     }
 
+    // Validate tick settings
     if (bHasPeriodicTick && TickInterval <= 0.0f)
     {
+        UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Tick interval must be > 0 when periodic ticking enabled"));
         return false;
     }
 
-    if (MaxStackSize < 0)
-    {
-        return false;
-    }
-
+    // Validate display settings
     if (DisplayPriority < 0 || DisplayPriority > 100)
     {
+        UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Display priority must be between 0-100"));
         return false;
     }
 
+    // Validate chain effects
     if (bTriggerActivationChainEffects)
     {
         for (const TSoftClassPtr<UNomadBaseStatusEffect>& ChainEffect : ActivationChainEffects)
         {
             if (ChainEffect.IsNull())
             {
+                UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Null activation chain effect found"));
                 return false;
             }
         }
@@ -69,12 +99,18 @@ bool UNomadInfiniteEffectConfig::IsConfigValid() const
         {
             if (ChainEffect.IsNull())
             {
+                UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Null deactivation chain effect found"));
                 return false;
             }
         }
     }
 
-    // Hybrid validation for infinite effects can be added here if needed
+    // Validate persistent modifier GUID
+    if (!PersistentAttributeModifier.Guid.IsValid())
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Persistent attribute modifier must have valid GUID"));
+        return false;
+    }
 
     return true;
 }
@@ -82,17 +118,17 @@ bool UNomadInfiniteEffectConfig::IsConfigValid() const
 TArray<FString> UNomadInfiniteEffectConfig::GetValidationErrors() const
 {
     TArray<FString> Errors;
+    
+    // Get base validation errors
+    Errors.Append(Super::GetValidationErrors());
 
+    // Validate tick settings
     if (bHasPeriodicTick && TickInterval <= 0.0f)
     {
         Errors.Add(TEXT("Tick interval must be greater than 0 when periodic ticking is enabled"));
     }
 
-    if (MaxStackSize < 0)
-    {
-        Errors.Add(TEXT("Max stacks cannot be negative"));
-    }
-
+    // Validate display settings
     if (DisplayPriority < 0 || DisplayPriority > 100)
     {
         Errors.Add(TEXT("Display priority must be between 0 and 100"));
@@ -121,84 +157,91 @@ TArray<FString> UNomadInfiniteEffectConfig::GetValidationErrors() const
         }
     }
 
+    // Validate persistent modifier
     if (!PersistentAttributeModifier.Guid.IsValid())
     {
         Errors.Add(TEXT("Persistent attribute modifier must have a valid GUID"));
     }
 
-    // Hybrid: warn if nothing to apply
+    // Hybrid system validation
     if (ApplicationMode == EStatusEffectApplicationMode::StatModification &&
         OnActivationStatModifications.Num() == 0 &&
         OnTickStatModifications.Num() == 0 &&
-        OnDeactivationStatModifications.Num() == 0)
+        OnDeactivationStatModifications.Num() == 0 &&
+        PersistentAttributeModifier.PrimaryAttributesMod.Num() == 0 &&
+        PersistentAttributeModifier.AttributesMod.Num() == 0 &&
+        PersistentAttributeModifier.StatisticsMod.Num() == 0)
     {
-        Errors.Add(TEXT("No stat modifications specified for infinite effect in StatModification mode."));
-    }
-    if ((ApplicationMode == EStatusEffectApplicationMode::DamageEvent || ApplicationMode == EStatusEffectApplicationMode::Both) && (!DamageTypeClass))
-    {
-        Errors.Add(TEXT("DamageTypeClass must be set when ApplicationMode is DamageEvent or Both."));
+        Errors.Add(TEXT("No stat modifications or persistent modifiers specified for infinite effect in StatModification mode"));
     }
 
     return Errors;
 }
 
+// =====================================================
+//         UTILITY FUNCTIONS
+// =====================================================
+
 FString UNomadInfiniteEffectConfig::GetEffectDescription() const
 {
-    FString LocalDescription = FString::Printf(TEXT("Infinite Effect: %s\n"), *EffectName.ToString());
+    FString Description = FString::Printf(TEXT("Infinite Effect: %s\n"), *EffectName.ToString());
     
-    LocalDescription += FString::Printf(TEXT("Category: %s\n"), 
+    Description += FString::Printf(TEXT("Category: %s\n"), 
                                   *StaticEnum<ENomadStatusCategory>()->GetNameStringByValue((int64)Category));
 
     if (bHasPeriodicTick)
     {
-        LocalDescription += FString::Printf(TEXT("Ticks every %.1f seconds\n"), TickInterval);
+        Description += FString::Printf(TEXT("Ticks every %.1f seconds\n"), TickInterval);
     }
     else
     {
-        LocalDescription += TEXT("No periodic ticking\n");
+        Description += TEXT("No periodic ticking\n");
     }
 
-    LocalDescription += FString::Printf(TEXT("Manual removal: %s\n"), 
+    Description += FString::Printf(TEXT("Manual removal: %s\n"), 
                                   bCanBeManuallyRemoved ? TEXT("Allowed") : TEXT("Restricted"));
 
-    LocalDescription += FString::Printf(TEXT("Persists through save/load: %s\n"), 
+    Description += FString::Printf(TEXT("Persists through save/load: %s\n"), 
                                   bPersistThroughSaveLoad ? TEXT("Yes") : TEXT("No"));
 
-    if (MaxStackSize == 0)
+    if (bCanStack)
     {
-        LocalDescription += TEXT("Unlimited stacking\n");
-    }
-    else if (MaxStackSize == 1)
-    {
-        LocalDescription += TEXT("No stacking (single instance)\n");
+        if (MaxStackSize == 0)
+        {
+            Description += TEXT("Unlimited stacking\n");
+        }
+        else
+        {
+            Description += FString::Printf(TEXT("Max %d stacks\n"), MaxStackSize);
+        }
     }
     else
     {
-        LocalDescription += FString::Printf(TEXT("Max %d stacks\n"), MaxStackSize);
+        Description += TEXT("No stacking (single instance)\n");
     }
 
-    int32 TotalMods = GetTotalStatModificationCount();
+    const int32 TotalMods = GetTotalStatModificationCount();
     if (TotalMods > 0)
     {
-        LocalDescription += FString::Printf(TEXT("%d total stat modifications\n"), TotalMods);
+        Description += FString::Printf(TEXT("%d total stat modifications\n"), TotalMods);
     }
 
     if (bTriggerActivationChainEffects && ActivationChainEffects.Num() > 0)
     {
-        LocalDescription += FString::Printf(TEXT("%d activation chain effects\n"), ActivationChainEffects.Num());
+        Description += FString::Printf(TEXT("%d activation chain effects\n"), ActivationChainEffects.Num());
     }
 
     if (bTriggerDeactivationChainEffects && DeactivationChainEffects.Num() > 0)
     {
-        LocalDescription += FString::Printf(TEXT("%d deactivation chain effects\n"), DeactivationChainEffects.Num());
+        Description += FString::Printf(TEXT("%d deactivation chain effects\n"), DeactivationChainEffects.Num());
     }
 
     if (!DeveloperNotes.IsEmpty())
     {
-        LocalDescription += FString::Printf(TEXT("\nNotes: %s"), *DeveloperNotes);
+        Description += FString::Printf(TEXT("\nNotes: %s"), *DeveloperNotes);
     }
 
-    return LocalDescription;
+    return Description;
 }
 
 bool UNomadInfiniteEffectConfig::CanBeRemovedByTag(const FGameplayTag& RemovalTag) const
@@ -207,7 +250,6 @@ bool UNomadInfiniteEffectConfig::CanBeRemovedByTag(const FGameplayTag& RemovalTa
     {
         return BypassRemovalTags.HasTag(RemovalTag);
     }
-
     return true;
 }
 
@@ -215,7 +257,10 @@ int32 UNomadInfiniteEffectConfig::GetTotalStatModificationCount() const
 {
     return OnActivationStatModifications.Num() + 
            OnTickStatModifications.Num() + 
-           OnDeactivationStatModifications.Num();
+           OnDeactivationStatModifications.Num() +
+           PersistentAttributeModifier.PrimaryAttributesMod.Num() +
+           PersistentAttributeModifier.AttributesMod.Num() +
+           PersistentAttributeModifier.StatisticsMod.Num();
 }
 
 #if WITH_EDITOR
@@ -225,8 +270,9 @@ void UNomadInfiniteEffectConfig::PostEditChangeProperty(FPropertyChangedEvent& P
 
     if (PropertyChangedEvent.Property)
     {
-        FName PropertyName = PropertyChangedEvent.Property->GetFName();
+        const FName PropertyName = PropertyChangedEvent.Property->GetFName();
 
+        // Ensure persistent modifier has valid GUID
         if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadInfiniteEffectConfig, PersistentAttributeModifier))
         {
             if (!PersistentAttributeModifier.Guid.IsValid())
@@ -236,6 +282,7 @@ void UNomadInfiniteEffectConfig::PostEditChangeProperty(FPropertyChangedEvent& P
             }
         }
 
+        // Clear chain effects when disabled
         if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadInfiniteEffectConfig, bTriggerActivationChainEffects))
         {
             if (!bTriggerActivationChainEffects)
@@ -252,12 +299,26 @@ void UNomadInfiniteEffectConfig::PostEditChangeProperty(FPropertyChangedEvent& P
             }
         }
 
+        // Clear tick modifications when ticking disabled
         if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadInfiniteEffectConfig, bHasPeriodicTick))
         {
             if (!bHasPeriodicTick)
             {
                 OnTickStatModifications.Empty();
+                bShowTickNotifications = false;
             }
+        }
+
+        // Validate tick interval
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadInfiniteEffectConfig, TickInterval))
+        {
+            TickInterval = FMath::Max(0.1f, TickInterval);
+        }
+
+        // Validate display priority
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadInfiniteEffectConfig, DisplayPriority))
+        {
+            DisplayPriority = FMath::Clamp(DisplayPriority, 0, 100);
         }
     }
 }
@@ -266,13 +327,18 @@ EDataValidationResult UNomadInfiniteEffectConfig::IsDataValid(FDataValidationCon
 {
     EDataValidationResult Result = Super::IsDataValid(Context);
 
-    TArray<FString> ErrorStrings = GetValidationErrors();
+    // Add our specific validation errors
+    const TArray<FString> ErrorStrings = GetValidationErrors();
     for (const FString& Error : ErrorStrings)
     {
-        Context.AddError(FText::FromString(Error));
-        Result = EDataValidationResult::Invalid;
+        if (!Error.Contains(TEXT("Base")) && !Super::GetValidationErrors().Contains(Error))
+        {
+            Context.AddError(FText::FromString(Error));
+            Result = EDataValidationResult::Invalid;
+        }
     }
 
+    // Add warnings for infinite-specific issues
     if (!bCanBeManuallyRemoved && BypassRemovalTags.IsEmpty())
     {
         Context.AddWarning(FText::FromString(TEXT("Effect cannot be removed and has no bypass tags - may be impossible to remove")));
@@ -283,9 +349,14 @@ EDataValidationResult UNomadInfiniteEffectConfig::IsDataValid(FDataValidationCon
         Context.AddWarning(FText::FromString(TEXT("Fast infinite ticking (<1s) on permanent effect may impact performance")));
     }
 
-    if (MaxStackSize == 0)
+    if (bCanStack && MaxStackSize == 0)
     {
         Context.AddWarning(FText::FromString(TEXT("Unlimited stacking may cause balance issues")));
+    }
+
+    if (bTriggerActivationChainEffects && ActivationChainEffects.Num() > 5)
+    {
+        Context.AddWarning(FText::FromString(TEXT("Many activation chain effects (>5) may impact performance")));
     }
 
     if (Result == EDataValidationResult::Valid)

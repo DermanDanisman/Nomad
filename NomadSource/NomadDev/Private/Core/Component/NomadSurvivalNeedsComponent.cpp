@@ -4,11 +4,10 @@
 
 #include "ACFCCTypes.h"
 #include "ARSStatisticsComponent.h"
-#include "Components/ACFCharacterMovementComponent.h"
 #include "Core/Debug/NomadLogCategories.h"
-#include "Core/FunctionLibrary/NomadStatusEffectGameplayHelpers.h"
 #include "Core/StatusEffect/NomadBaseStatusEffect.h"
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
+#include "Core/StatusEffect/SurvivalHazard/NomadSurvivalStatusEffect.h"
 #include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
 
@@ -79,7 +78,7 @@ void UNomadSurvivalNeedsComponent::BeginPlay()
     // StatusEffectManagerComponent is optional but recommended for gameplay effects
     if (!StatusEffectManagerComponent)
     {
-        UE_LOG_SURVIVAL(Warning, TEXT("ACFStatusEffectManagerComponent missing on %s - status effects will not work"), 
+        UE_LOG_SURVIVAL(Warning, TEXT("NomadStatusEffectManagerComponent missing on %s - status effects will not work"), 
                        *GetOwner()->GetName());
         // Continue execution - survival works without status effects, just less gameplay depth
     }
@@ -270,9 +269,13 @@ void UNomadSurvivalNeedsComponent::OnMinuteTick(const float TimeOfDay)
     ApplyDecayToStats(CalculatedHungerDecay, CalculatedThirstDecay);
     
     // Evaluate all survival state transitions and fire appropriate events
-    // Order matters here - state transitions should happen before warnings
+    // Order matters here - state transitions should happen before status effects
     EvaluateSurvivalStateTransitions(CachedValues);
-    EvaluateMovementSlowState(CachedValues);
+    
+    // NEW: Apply data-driven survival status effects based on current conditions
+    EvaluateAndApplySurvivalEffects(CachedValues);
+    
+    // Continue with existing systems
     EvaluateWeatherHazards(CachedValues);
     
     // Update body temperature simulation based on environmental conditions
@@ -286,8 +289,8 @@ void UNomadSurvivalNeedsComponent::OnMinuteTick(const float TimeOfDay)
     MaybeFireHypothermiaWarning(TimeOfDay, CachedValues.BodyTemp);
     
     // Update overall survival state based on current conditions
-    // This determines the replicated CurrentSurvivalState for clients
-    EvaluateAndUpdateSurvivalState(CachedValues);
+    // RENAMED: This is now clearly UI-only function
+    UpdateSurvivalUIState(CachedValues);
 
 #if !UE_BUILD_SHIPPING
     // Debug logging for development builds only - helps track simulation state
@@ -295,6 +298,8 @@ void UNomadSurvivalNeedsComponent::OnMinuteTick(const float TimeOfDay)
         CachedValues.BodyTemp, PlayerLocationTemperature, CachedValues.Hunger, CachedValues.Thirst);
 #endif
 }
+
+// ======== Core Helper Functions ========
 
 UNomadSurvivalNeedsComponent::FCachedStatValues UNomadSurvivalNeedsComponent::GetCachedStatValues() const
 {
@@ -438,6 +443,19 @@ void UNomadSurvivalNeedsComponent::ApplyDecayToStats(const float InHungerDecay, 
     StatisticsComponent->ModifyStatistic(GetConfig()->GetThirstStatTag(), -FMath::Max(0.f, InThirstDecay));
 }
 
+bool UNomadSurvivalNeedsComponent::ShouldSlowMovement(const FCachedStatValues& Values) const
+{
+    // Early exit if data is invalid or config is missing
+    if (!Values.bValid || !GetConfig()) return false;
+    
+    // Check if either hunger or thirst is low enough to warrant movement penalty
+    // Movement slowing occurs at warning thresholds, not just at critical (0) levels
+    return Values.Hunger <= GetConfig()->GetHungerSlowThreshold() || 
+           Values.Thirst <= GetConfig()->GetThirstSlowThreshold();
+}
+
+// ======== Event System Functions ========
+
 void UNomadSurvivalNeedsComponent::EvaluateSurvivalStateTransitions(const FCachedStatValues& CachedValues)
 {
     // --- Starvation state management (NO warning broadcasts here) ---
@@ -445,7 +463,7 @@ void UNomadSurvivalNeedsComponent::EvaluateSurvivalStateTransitions(const FCache
     if (IsStarving(CachedValues.Hunger))
     {
         // Apply status effect every tick while starving (effect should be non-stacking)
-        TryApplyStatusEffect(GetConfig()->GetStarvationDebuffEffect(), GetConfig()->StarvationHealthDoTPercent);
+        ApplyGenericStatusEffect(GetConfig()->GetStarvationDebuffEffect(), GetConfig()->StarvationHealthDoTPercent);
         
         // Fire transition event only once when entering starvation state
         if (!bIsStarving)
@@ -470,7 +488,7 @@ void UNomadSurvivalNeedsComponent::EvaluateSurvivalStateTransitions(const FCache
     if (IsDehydrated(CachedValues.Thirst))
     {
         // Apply status effect every tick while dehydrated (effect should be non-stacking)
-        TryApplyStatusEffect(GetConfig()->GetDehydrationDebuffEffect(), GetConfig()->DehydrationHealthDoTPercent);
+        ApplyGenericStatusEffect(GetConfig()->GetDehydrationDebuffEffect(), GetConfig()->DehydrationHealthDoTPercent);
         
         // Fire transition event only once when entering dehydration state
         if (!bIsDehydrated)
@@ -546,259 +564,6 @@ void UNomadSurvivalNeedsComponent::EvaluateWeatherHazards(const FCachedStatValue
     {
         bHypothermiaWarningGiven = false;
     }
-}
-
-bool UNomadSurvivalNeedsComponent::ShouldSlowMovement(const FCachedStatValues& Values) const
-{
-    // Early exit if data is invalid or config is missing
-    if (!Values.bValid || !GetConfig()) return false;
-    
-    // Check if either hunger or thirst is low enough to warrant movement penalty
-    // Movement slowing occurs at warning thresholds, not just at critical (0) levels
-    return Values.Hunger <= GetConfig()->GetHungerSlowThreshold() || 
-           Values.Thirst <= GetConfig()->GetThirstSlowThreshold();
-}
-
-void UNomadSurvivalNeedsComponent::EvaluateMovementSlowState(const FCachedStatValues& CachedValues)
-{
-    /*
-    -----------------------------------------------------------------------------
-    EvaluateMovementSlowState
-    -----------------------------------------------------------------------------
-    Purpose:
-        Handles the application and removal of temporary debuffs to the character's
-        movement speed and stamina cap (max stamina) based on survival-related
-        conditions (hunger, thirst, temperature hazards).
-
-        - Ensures effects are applied when survival thresholds are crossed,
-          and cleanly removed on recovery.
-        - Fully modular: supports both ARS attribute and per-locomotion state
-          (walk/jog/sprint) movement slow.
-
-    Mechanism:
-        - Called periodically or after relevant stat changes.
-        - If hunger, thirst, or temperature hazards are detected, designer-driven
-          multipliers for movement speed and stamina cap are calculated from the
-          data asset.
-        - Modifiers are applied to:
-            1. The attribute/stat system (UARSStatisticsComponent), which affects
-               overall stat values and MaxWalkSpeed.
-            2. The movement component's locomotion states (UACFCharacterMovementComponent)
-               using helpers, ensuring walk/jog/sprint states are slowed as expected.
-        - When the condition normalizes, all modifiers are safely removed by GUID.
-
-    Implementation Details:
-        - Movement speed is modified both as an attribute (RPG.Attributes.MovementSpeed)
-          and via per-locomotion state (walk/jog/sprint) using helpers.
-        - Stamina cap is modified via the Endurance (primary attribute).
-        - All multipliers are obtained from the designer-tuned data asset.
-        - Deterministic GUIDs are used for safe multiplayer add/remove.
-
-    Why Both Systems?
-        - ARS stats ensure MaxWalkSpeed and stamina cap update correctly.
-        - Locomotion state helpers ensure all ACF movement modes are affected.
-        - This eliminates edge cases where only sprint or only walk would be slowed.
-
-    Multiplayer Considerations:
-        - Static, deterministic GUIDs are used for modifier identity, ensuring
-          correct replication and removal across server/client.
-        - All changes are performed on the server; replication updates clients.
-
-    Debugging:
-        - Former and new values for speed and stamina cap are logged for debug builds.
-
-    Usage:
-        - Call this after any change to hunger, thirst, or body temperature.
-        - Ensures only one instance of each slow is applied, and safely removed.
-
-    -----------------------------------------------------------------------------
-    */
-
-    // Early exit if cached values are invalid (missing stats, config, etc.)
-    if (!CachedValues.bValid) return;
-
-    UARSStatisticsComponent* StatsComp = GetOwner()->FindComponentByClass<UARSStatisticsComponent>();
-    UACFCharacterMovementComponent* MoveComp = GetOwner()->FindComponentByClass<UACFCharacterMovementComponent>();
-    ACharacter* Character = Cast<ACharacter>(GetOwner());
-    const UNomadSurvivalNeedsData* Config = GetConfig();
-
-    float FormerSpeed = 0.f, LaterSpeed = 0.f;
-    float FormerStaminaCap = 0.f, LaterStaminaCap = 0.f;
-
-    // 1. Get former values for debug
-    if (StatsComp)
-    {
-        FormerSpeed = StatsComp->GetCurrentAttributeValue(FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed")));
-        FormerStaminaCap = StatsComp->GetCurrentPrimaryAttributeValue(FGameplayTag::RequestGameplayTag(TEXT("RPG.PrimaryAttributes.Endurance")));
-    }
-
-    // 2. Calculate multipliers based on hunger, thirst, temperature
-    bool bShouldSlow = ShouldSlowMovement(CachedValues);
-    float SpeedMultiplier = 1.0f;
-    float StaminaCapMultiplier = 1.0f;
-
-    if (Config)
-    {
-        if (CachedValues.Hunger <= Config->GetHungerSlowThreshold())
-        {
-            SpeedMultiplier = Config->GetHungerSpeedMultiplier();
-            StaminaCapMultiplier = Config->GetHungerStaminaCapMultiplier();
-        }
-        if (CachedValues.Thirst <= Config->GetThirstSlowThreshold())
-        {
-            SpeedMultiplier = FMath::Min(SpeedMultiplier, Config->GetThirstSpeedMultiplier());
-            StaminaCapMultiplier = FMath::Min(StaminaCapMultiplier, Config->GetThirstStaminaCapMultiplier());
-        }
-
-        float TempSpeedMultiplier = 1.0f;
-        float TempStaminaCapMultiplier = 1.0f;
-        const float BodyTemp = CachedValues.BodyTemp;
-
-        // Heatstroke
-        if (BodyTemp >= Config->GetHeatstrokeMildThreshold() && BodyTemp < Config->GetHeatstrokeHeavyThreshold())
-        {
-            TempSpeedMultiplier = Config->GetHeatstrokeMildSpeedMultiplier();
-            TempStaminaCapMultiplier = Config->GetHeatstrokeMildStaminaMultiplier();
-            bShouldSlow = true;
-        }
-        else if (BodyTemp >= Config->GetHeatstrokeHeavyThreshold() && BodyTemp < Config->GetHeatstrokeExtremeThreshold())
-        {
-            TempSpeedMultiplier = Config->GetHeatstrokeHeavySpeedMultiplier();
-            TempStaminaCapMultiplier = Config->GetHeatstrokeHeavyStaminaMultiplier();
-            bShouldSlow = true;
-        }
-        else if (BodyTemp >= Config->GetHeatstrokeExtremeThreshold())
-        {
-            TempSpeedMultiplier = Config->GetHeatstrokeExtremeSpeedMultiplier();
-            TempStaminaCapMultiplier = Config->GetHeatstrokeExtremeStaminaMultiplier();
-            bShouldSlow = true;
-        }
-
-        // Hypothermia
-        if (BodyTemp <= Config->GetHypothermiaMildThreshold() && BodyTemp > Config->GetHypothermiaHeavyThreshold())
-        {
-            TempSpeedMultiplier = FMath::Min(TempSpeedMultiplier, Config->GetHypothermiaMildSpeedMultiplier());
-            TempStaminaCapMultiplier = FMath::Min(TempStaminaCapMultiplier, Config->GetHypothermiaMildStaminaMultiplier());
-            bShouldSlow = true;
-        }
-        else if (BodyTemp <= Config->GetHypothermiaHeavyThreshold() && BodyTemp > Config->GetHypothermiaExtremeThreshold())
-        {
-            TempSpeedMultiplier = FMath::Min(TempSpeedMultiplier, Config->GetHypothermiaHeavySpeedMultiplier());
-            TempStaminaCapMultiplier = FMath::Min(TempStaminaCapMultiplier, Config->GetHypothermiaHeavyStaminaMultiplier());
-            bShouldSlow = true;
-        }
-        else if (BodyTemp <= Config->GetHypothermiaExtremeThreshold())
-        {
-            TempSpeedMultiplier = FMath::Min(TempSpeedMultiplier, Config->GetHypothermiaExtremeSpeedMultiplier());
-            TempStaminaCapMultiplier = FMath::Min(TempStaminaCapMultiplier, Config->GetHypothermiaExtremeStaminaMultiplier());
-            bShouldSlow = true;
-        }
-
-        // Combine for final
-        SpeedMultiplier = FMath::Min(SpeedMultiplier, TempSpeedMultiplier);
-        StaminaCapMultiplier = FMath::Min(StaminaCapMultiplier, TempStaminaCapMultiplier);
-    }
-
-    // 3. Multiplayer-safe GUIDs (these should be static or otherwise deterministic per effect)
-    static const FGuid MovementSlowGuid = FGuid(0x12345678, 0x1111, 0x2222, 0x33334444);
-    static const FGuid StaminaCapGuid   = FGuid(0x12345678, 0x2222, 0x3333, 0x44445555);
-
-    bool bWasSlowed = bMovementSlowed;
-
-    if (bShouldSlow && !bMovementSlowed)
-    {
-        bMovementSlowed = true;
-
-        // --- ARS stat modifier ---
-        if (StatsComp)
-        {
-            FAttributesSetModifier MoveSpeedModifier;
-            MoveSpeedModifier.Guid = MovementSlowGuid;
-            MoveSpeedModifier.AttributesMod.Add(
-                FAttributeModifier(
-                    FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed")),
-                    EModifierType::EMultiplicative,
-                    SpeedMultiplier
-                )
-            );
-
-            FAttributesSetModifier StaminaCapModifier;
-            StaminaCapModifier.Guid = StaminaCapGuid;
-            StaminaCapModifier.PrimaryAttributesMod.Add(
-                FAttributeModifier(
-                    FGameplayTag::RequestGameplayTag(TEXT("RPG.PrimaryAttributes.Endurance")),
-                    EModifierType::EMultiplicative,
-                    StaminaCapMultiplier
-                )
-            );
-
-            StatsComp->AddAttributeSetModifier(MoveSpeedModifier);
-            StatsComp->AddAttributeSetModifier(StaminaCapModifier);
-        }
-
-        // --- ACF Locomotion state modifier (for walk/jog/sprint) ---
-        if (MoveComp)
-        {
-            UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedModifierToState(MoveComp, ELocomotionState::EWalk, SpeedMultiplier, MovementSlowGuid);
-            UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedModifierToState(MoveComp, ELocomotionState::EJog, SpeedMultiplier, MovementSlowGuid);
-            UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedModifierToState(MoveComp, ELocomotionState::ESprint, SpeedMultiplier, MovementSlowGuid);
-        }
-
-        // --- Sync Character Movement speed ---
-        UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(Character);
-
-        // Broadcast cause of slow for UI/logic
-        OnMovementSlowed.Broadcast(FName(TEXT("Hazard")), CachedValues.BodyTemp);
-    }
-    else if (!bShouldSlow && bMovementSlowed)
-    {
-        bMovementSlowed = false;
-
-        // --- Remove ARS stat modifier ---
-        if (StatsComp)
-        {
-            FAttributesSetModifier MoveSpeedModifier; MoveSpeedModifier.Guid = MovementSlowGuid;
-            StatsComp->RemoveAttributeSetModifier(MoveSpeedModifier);
-
-            FAttributesSetModifier StaminaCapModifier; StaminaCapModifier.Guid = StaminaCapGuid;
-            StatsComp->RemoveAttributeSetModifier(StaminaCapModifier);
-        }
-
-        // --- Remove ACF locomotion state modifier ---
-        if (MoveComp)
-        {
-            UNomadStatusEffectGameplayHelpers::RemoveMovementSpeedModifierFromState(MoveComp, ELocomotionState::EWalk, MovementSlowGuid);
-            UNomadStatusEffectGameplayHelpers::RemoveMovementSpeedModifierFromState(MoveComp, ELocomotionState::EJog, MovementSlowGuid);
-            UNomadStatusEffectGameplayHelpers::RemoveMovementSpeedModifierFromState(MoveComp, ELocomotionState::ESprint, MovementSlowGuid);
-        }
-
-        UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(Character);
-
-        OnMovementRecovered.Broadcast(CachedValues.BodyTemp);
-    }
-
-    // 4. Debug info
-    if (StatsComp)
-    {
-        LaterSpeed = StatsComp->GetCurrentAttributeValue(FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed")));
-        LaterStaminaCap = StatsComp->GetCurrentPrimaryAttributeValue(FGameplayTag::RequestGameplayTag(TEXT("RPG.PrimaryAttributes.Endurance")));
-    }
-
-#if !UE_BUILD_SHIPPING
-    if (GEngine)
-    {
-        FString DebugMsg = FString::Printf(
-            TEXT("[Survival] SPEED %.1f -> %.1f | ENDURANCE %.1f -> %.1f | SpeedMultiplier: %.2f | StaminaMultiplier: %.2f | ShouldSlow: %s | WasSlowed: %s"),
-            FormerSpeed, LaterSpeed, FormerStaminaCap, LaterStaminaCap,
-            SpeedMultiplier, StaminaCapMultiplier,
-            bShouldSlow ? TEXT("TRUE") : TEXT("FALSE"),
-            bWasSlowed ? TEXT("TRUE") : TEXT("FALSE")
-        );
-        GEngine->AddOnScreenDebugMessage(
-            -1, 0.f, FColor::Yellow, DebugMsg
-        );
-    }
-#endif
 }
 
 void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTempCelsius, const FCachedStatValues& CachedValues)
@@ -897,7 +662,7 @@ void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTemp
             // Broadcast heatstroke started event for gameplay systems
             OnHeatstrokeStarted.Broadcast(UpdatedBodyTemp);
             // Apply heatstroke status effect (health drain, movement penalty, etc.)
-            TryApplyStatusEffect(GetConfig()->GetHeatstrokeDebuffEffect(), 1);
+            ApplyGenericStatusEffect(GetConfig()->GetHeatstrokeDebuffEffect(), 1);
         }
     }
     // Recovery from heatstroke when body temperature drops below threshold
@@ -930,7 +695,7 @@ void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTemp
             // Broadcast hypothermia started event for gameplay systems
             OnHypothermiaStarted.Broadcast(UpdatedBodyTemp);
             // Apply hypothermia status effect (movement penalty, reduced stamina regen, etc.)
-            TryApplyStatusEffect(GetConfig()->GetHypothermiaDebuffEffect(), 1);
+            ApplyGenericStatusEffect(GetConfig()->GetHypothermiaDebuffEffect(), 1);
         }
     }
     // Recovery from hypothermia when body temperature rises above threshold
@@ -949,6 +714,282 @@ void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTemp
         ColdExposureCounter = 0;
     }
 }
+
+void UNomadSurvivalNeedsComponent::UpdateSurvivalUIState(const FCachedStatValues& CachedValues)
+{
+    // Early exit if cached values are invalid
+    if (!CachedValues.bValid) return;
+    
+    // Start with normal state as default
+    ESurvivalState NewState = ESurvivalState::Normal;
+
+    // Priority order: most severe conditions first to ensure proper state precedence
+    // Temperature hazards take the highest priority as they're immediately life-threatening
+    if (IsHeatstroke(CachedValues.BodyTemp))
+        NewState = ESurvivalState::Heatstroke;
+    else if (IsHypothermic(CachedValues.BodyTemp))
+        NewState = ESurvivalState::Hypothermic;
+    // Critical hunger/thirst states (at 0) take next priority
+    else if (IsStarving(CachedValues.Hunger))
+        NewState = ESurvivalState::Starving;
+    else if (IsDehydrated(CachedValues.Thirst))
+        NewState = ESurvivalState::Dehydrated;
+    // Warning hunger/thirst states (low but not 0) have lowest priority
+    else if (IsHungry(CachedValues.Hunger))
+        NewState = ESurvivalState::Hungry;
+    else if (IsThirsty(CachedValues.Thirst))
+        NewState = ESurvivalState::Thirsty;
+    
+    // Only broadcast state change if the state actually changed
+    // This prevents unnecessary network traffic and event spam
+    if (NewState != CurrentSurvivalState)
+    {
+        const ESurvivalState OldState = CurrentSurvivalState;
+        CurrentSurvivalState = NewState; // Update replicated state for clients
+        
+        // Broadcast state change event for UI systems and gameplay logic
+        OnSurvivalStateChanged.Broadcast(OldState, NewState);
+    }
+}
+
+// ======== New Survival Status Effect System ========
+
+void UNomadSurvivalNeedsComponent::EvaluateAndApplySurvivalEffects(const FCachedStatValues& CachedValues)
+{
+    /*
+    -----------------------------------------------------------------------------
+    EvaluateAndApplySurvivalEffects
+    -----------------------------------------------------------------------------
+    Purpose:
+        Replaces the old manual attribute manipulation system with proper status effects.
+        Evaluates current survival conditions (hunger, thirst, temperature) and applies
+        appropriate status effects with data-driven attribute modifiers.
+
+    New Approach:
+        - Uses UNomadSurvivalStatusEffect classes instead of manual GUID tracking
+        - All attribute modifiers come from UNomadInfiniteEffectConfig data assets
+        - Status effects handle their own application/removal and visual effects
+        - Cleaner, more maintainable, and fully data-driven
+    -----------------------------------------------------------------------------
+    */
+
+    // Early exit if cached values are invalid
+    if (!CachedValues.bValid) return;
+
+    // Get status effect manager for applying effects
+    if (!StatusEffectManagerComponent)
+    {
+        UE_LOG_SURVIVAL(Warning, TEXT("No StatusEffectManager found on %s - survival effects disabled"), 
+               *GetOwner()->GetName());
+        return;
+    }
+
+    // Remove all existing survival effects first
+    // This ensures we don't have stale effects when conditions change
+    RemoveAllSurvivalEffects();
+
+    // Evaluate each survival condition and apply appropriate effects
+    EvaluateHungerEffects(CachedValues.Hunger);
+    EvaluateThirstEffects(CachedValues.Thirst);  
+    EvaluateTemperatureEffects(CachedValues.BodyTemp);
+}
+
+void UNomadSurvivalNeedsComponent::EvaluateHungerEffects(float HungerLevel)
+{
+    const UNomadSurvivalNeedsData* Config = GetConfig();
+    if (!Config) return;
+
+    // Check for critical starvation (hunger at or below 0)
+    if (HungerLevel <= 0.0f)
+    {
+        // Apply severe starvation effect with health damage over time
+        ApplyStatusEffect(
+            Config->GetStarvationSevereEffectClass(), 
+            ESurvivalSeverity::Severe,
+            Config->StarvationHealthDoTPercent  // e.g., 0.005 for 0.5% per second
+        );
+    }
+    // Check for hunger warning threshold
+    else if (HungerLevel <= Config->GetHungerSlowThreshold())
+    {
+        // Apply mild starvation effect with movement/stamina penalties but no DoT
+        ApplyStatusEffect(
+            Config->GetStarvationMildEffectClass(),
+            ESurvivalSeverity::Mild,
+            0.0f  // No damage over time for mild hunger
+        );
+    }
+    // If hunger is above thresholds, no starvation effects are applied
+}
+
+void UNomadSurvivalNeedsComponent::EvaluateThirstEffects(float ThirstLevel)
+{
+    const UNomadSurvivalNeedsData* Config = GetConfig();
+    if (!Config) return;
+
+    // Check for critical dehydration (thirst at or below 0)
+    if (ThirstLevel <= 0.0f)
+    {
+        // Apply severe dehydration effect with health damage over time
+        ApplyStatusEffect(
+            Config->GetDehydrationSevereEffectClass(),
+            ESurvivalSeverity::Severe, 
+            Config->DehydrationHealthDoTPercent  // e.g., 0.01 for 1% per second
+        );
+    }
+    // Check for thirst warning threshold
+    else if (ThirstLevel <= Config->GetThirstSlowThreshold())
+    {
+        // Apply mild dehydration effect with movement/stamina penalties but no DoT
+        ApplyStatusEffect(
+            Config->GetDehydrationMildEffectClass(),
+            ESurvivalSeverity::Mild,
+            0.0f  // No damage over time for mild thirst
+        );
+    }
+    // If thirst is above thresholds, no dehydration effects are applied
+}
+
+void UNomadSurvivalNeedsComponent::EvaluateTemperatureEffects(float BodyTemp)
+{
+    const UNomadSurvivalNeedsData* Config = GetConfig();
+    if (!Config) return;
+
+    // ===== HEATSTROKE EVALUATION =====
+    // Check temperature against heatstroke thresholds (most severe first)
+    if (BodyTemp >= Config->GetHeatstrokeExtremeThreshold())
+    {
+        // Extreme heatstroke: maximum penalties and thirst consumption
+        ApplyStatusEffect(
+            Config->GetHeatstrokeExtremeEffectClass(),
+            ESurvivalSeverity::Extreme,
+            0.0f  // Heatstroke doesn't cause direct health damage, but increases thirst consumption
+        );
+    }
+    else if (BodyTemp >= Config->GetHeatstrokeHeavyThreshold())
+    {
+        // Heavy heatstroke: significant penalties
+        ApplyStatusEffect(
+            Config->GetHeatstrokeHeavyEffectClass(),
+            ESurvivalSeverity::Heavy,
+            0.0f
+        );
+    }
+    else if (BodyTemp >= Config->GetHeatstrokeMildThreshold())
+    {
+        // Mild heatstroke: minor penalties
+        ApplyStatusEffect(
+            Config->GetHeatstrokeMildEffectClass(),
+            ESurvivalSeverity::Mild,
+            0.0f
+        );
+    }
+    // ===== HYPOTHERMIA EVALUATION =====
+    // Check temperature against hypothermia thresholds (most severe first)
+    else if (BodyTemp <= Config->GetHypothermiaExtremeThreshold())
+    {
+        // Extreme hypothermia: maximum penalties and hunger consumption
+        ApplyStatusEffect(
+            Config->GetHypothermiaExtremeEffectClass(),
+            ESurvivalSeverity::Extreme,
+            0.0f  // Hypothermia doesn't cause direct health damage, but increases hunger consumption
+        );
+    }
+    else if (BodyTemp <= Config->GetHypothermiaHeavyThreshold())
+    {
+        // Heavy hypothermia: significant penalties
+        ApplyStatusEffect(
+            Config->GetHypothermiaHeavyEffectClass(),
+            ESurvivalSeverity::Heavy,
+            0.0f
+        );
+    }
+    else if (BodyTemp <= Config->GetHypothermiaMildThreshold())
+    {
+        // Mild hypothermia: minor penalties
+        ApplyStatusEffect(
+            Config->GetHypothermiaMildEffectClass(),
+            ESurvivalSeverity::Mild,
+            0.0f
+        );
+    }
+    // If temperature is in the safe range, no temperature effects are applied
+}
+
+void UNomadSurvivalNeedsComponent::ApplyStatusEffect(TSubclassOf<UNomadSurvivalStatusEffect> EffectClass, ESurvivalSeverity Severity, float DoTPercent)
+{
+    // Validate inputs
+    if (!EffectClass || !StatusEffectManagerComponent)
+    {
+        UE_LOG_SURVIVAL(Warning, TEXT("Cannot apply survival effect - invalid class or manager"));
+        return;
+    }
+
+    // Apply the status effect using the ACF status effect system
+    // The effect will automatically handle attribute modifiers based on its config
+    UNomadSurvivalStatusEffect* AppliedEffect = Cast<UNomadSurvivalStatusEffect>(
+        StatusEffectManagerComponent->ApplyHazardDoTEffectWithPercent(EffectClass, DoTPercent)
+    );
+
+    if (AppliedEffect)
+    {
+        // Configure the effect with severity and DoT settings
+        AppliedEffect->SetSeverityLevel(Severity);
+        AppliedEffect->SetDoTPercent(DoTPercent);
+
+        // Log successful application
+        UE_LOG_SURVIVAL(Log, TEXT("Applied survival effect %s with severity %s"), 
+               *EffectClass->GetName(),
+               *StaticEnum<ESurvivalSeverity>()->GetNameStringByValue((int64)Severity));
+    }
+    else
+    {
+        UE_LOG_SURVIVAL(Error, TEXT("Failed to apply survival effect %s"), *EffectClass->GetName());
+    }
+}
+
+void UNomadSurvivalNeedsComponent::RemoveAllSurvivalEffects()
+{
+    if (!StatusEffectManagerComponent) return;
+
+    // Remove all survival-related status effects by their gameplay tags
+    // This ensures clean state transitions when conditions change
+    StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Starvation"));
+    StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"));
+    StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"));
+    StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia"));
+}
+
+// ======== Legacy Status Effect System (Compatibility) ========
+
+void UNomadSurvivalNeedsComponent::ApplyGenericStatusEffect(const TSubclassOf<UNomadBaseStatusEffect>& InStatusEffectClass, float InDoTPercent) const
+{
+    // Only proceed if both component and effect class are valid
+    if (StatusEffectManagerComponent && *InStatusEffectClass)
+    {
+        // Apply status effect using ACF system
+        // Effect should be configured as non-stacking and retriggerable in the asset
+        StatusEffectManagerComponent->ApplyHazardDoTEffectWithPercent(
+            InStatusEffectClass,
+            InDoTPercent
+        );
+    }
+    // Silently fail if components/classes are missing - survival system continues without effects
+    // This allows the system to work even if status effect system is not available
+}
+
+void UNomadSurvivalNeedsComponent::TryRemoveStatusEffect(const FGameplayTag StatusEffectTag) const
+{
+    // Only proceed if component is valid and tag is set
+    if (StatusEffectManagerComponent && StatusEffectTag.IsValid())
+    {
+        // Remove status effect by gameplay tag using ACF system
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(StatusEffectTag);
+    }
+    // Silently fail if components/tags are missing - prevents crashes from invalid removal attempts
+}
+
+// ======== Warning System ========
 
 void UNomadSurvivalNeedsComponent::MaybeFireStarvationWarning(const float CurrentInGameTime, const float CurrentHunger)
 {
@@ -1204,70 +1245,6 @@ void UNomadSurvivalNeedsComponent::MaybeFireHypothermiaWarning(const float Curre
     }
 }
 
-void UNomadSurvivalNeedsComponent::EvaluateAndUpdateSurvivalState(const FCachedStatValues& CachedValues)
-{
-    // Early exit if cached values are invalid
-    if (!CachedValues.bValid) return;
-    
-    // Start with normal state as default
-    ESurvivalState NewState = ESurvivalState::Normal;
-
-    // Priority order: most severe conditions first to ensure proper state precedence
-    // Temperature hazards take the highest priority as they're immediately life-threatening
-    if (IsHeatstroke(CachedValues.BodyTemp))
-        NewState = ESurvivalState::Heatstroke;
-    else if (IsHypothermic(CachedValues.BodyTemp))
-        NewState = ESurvivalState::Hypothermic;
-    // Critical hunger/thirst states (at 0) take next priority
-    else if (IsStarving(CachedValues.Hunger))
-        NewState = ESurvivalState::Starving;
-    else if (IsDehydrated(CachedValues.Thirst))
-        NewState = ESurvivalState::Dehydrated;
-    // Warning hunger/thirst states (low but not 0) have lowest priority
-    else if (IsHungry(CachedValues.Hunger))
-        NewState = ESurvivalState::Hungry;
-    else if (IsThirsty(CachedValues.Thirst))
-        NewState = ESurvivalState::Thirsty;
-    
-    // Only broadcast state change if the state actually changed
-    // This prevents unnecessary network traffic and event spam
-    if (NewState != CurrentSurvivalState)
-    {
-        const ESurvivalState OldState = CurrentSurvivalState;
-        CurrentSurvivalState = NewState; // Update replicated state for clients
-        
-        // Broadcast state change event for UI systems and gameplay logic
-        OnSurvivalStateChanged.Broadcast(OldState, NewState);
-    }
-}
-
-void UNomadSurvivalNeedsComponent::TryApplyStatusEffect(const TSubclassOf<UNomadBaseStatusEffect>& InStatusEffectClass, float InDoTPercent) const
-{
-    // Only proceed if both component and effect class are valid
-    if (StatusEffectManagerComponent && *InStatusEffectClass)
-    {
-        // Apply status effect using ACF system
-        // Effect should be configured as non-stacking and retriggerable in the asset
-        StatusEffectManagerComponent->ApplyHazardDoTEffectWithPercent(
-            InStatusEffectClass,
-            InDoTPercent
-            );
-    }
-    // Silently fail if components/classes are missing - survival system continues without effects
-    // This allows the system to work even if status effect system is not available
-}
-
-void UNomadSurvivalNeedsComponent::TryRemoveStatusEffect(const FGameplayTag StatusEffectTag) const
-{
-    // Only proceed if component is valid and tag is set
-    if (StatusEffectManagerComponent && StatusEffectTag.IsValid())
-    {
-        // Remove status effect by gameplay tag using ACF system
-        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(StatusEffectTag);
-    }
-    // Silently fail if components/tags are missing - prevents crashes from invalid removal attempts
-}
-
 bool UNomadSurvivalNeedsComponent::ShouldFireEscalatingWarning(const FString& WarningType, const float CurrentTime, const float BaseCooldown, int32& WarningCount)
 {
     // Use pointer to avoid repeated string comparisons and switch statements
@@ -1331,9 +1308,7 @@ void UNomadSurvivalNeedsComponent::BroadcastSurvivalNotification(const FString& 
 #endif
 }
 
-// --- Condition Check Helper Functions ---
-// These functions encapsulate the logic for determining survival condition states
-// They use cached values to avoid repeated StatisticsComponent calls
+// ======== State Check Helper Functions ========
 
 bool UNomadSurvivalNeedsComponent::IsStarving(const float CachedHunger) const
 {

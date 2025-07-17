@@ -13,6 +13,7 @@ class UNomadBaseStatusEffect;
  * ENomadStatusCategory
  * --------------------
  * Simple status categories for organizing effects in UI, logic, and filtering.
+ * Used for UI color coding, effect grouping, and batch operations.
  */
 UENUM(BlueprintType)
 enum class ENomadStatusCategory : uint8
@@ -25,6 +26,57 @@ enum class ENomadStatusCategory : uint8
     
     /** Neutral or special effects */
     Neutral         UMETA(DisplayName="Neutral")
+};
+
+/**
+ * EStatusEffectType
+ * -----------------
+ * Enum for different types of status effects based on their behavior and lifecycle.
+ * Used by the smart removal system to determine appropriate removal strategy.
+ */
+UENUM(BlueprintType)
+enum class EStatusEffectType : uint8
+{
+    Unknown     UMETA(DisplayName = "Unknown"),
+    Instant     UMETA(DisplayName = "Instant"),      // Apply once and done
+    Timed       UMETA(DisplayName = "Timed"),        // Has duration, can stack
+    Infinite    UMETA(DisplayName = "Infinite"),     // Permanent until removed
+    Survival    UMETA(DisplayName = "Survival")      // Special survival effects
+};
+
+/**
+ * EStatusEffectApplicationMode
+ * ---------------------------
+ * Determines how status effects apply their gameplay impact.
+ * Part of the hybrid system for flexible effect implementation.
+ */
+UENUM(BlueprintType)
+enum class EStatusEffectApplicationMode : uint8
+{
+    /** Only modifies stats/attributes directly */
+    StatModification    UMETA(DisplayName="Stat Modification"),
+    
+    /** Only uses UE damage events */
+    DamageEvent        UMETA(DisplayName="Damage Event"),
+    
+    /** Uses both stat modification and damage events */
+    Both               UMETA(DisplayName="Both")
+};
+
+/**
+ * ENomadAfflictionNotificationType
+ * --------------------------------
+ * Types of notifications for UI affliction system.
+ * Used to inform UI components about status effect state changes.
+ */
+UENUM(BlueprintType)
+enum class ENomadAfflictionNotificationType : uint8
+{
+    Applied     UMETA(DisplayName="Applied"),       // Effect was first applied
+    Stacked     UMETA(DisplayName="Stacked"),       // Effect gained a stack
+    Unstacked   UMETA(DisplayName="Unstacked"),     // Effect lost a stack
+    Refreshed   UMETA(DisplayName="Refreshed"),     // Effect duration was refreshed
+    Removed     UMETA(DisplayName="Removed")        // Effect was completely removed
 };
 
 /**
