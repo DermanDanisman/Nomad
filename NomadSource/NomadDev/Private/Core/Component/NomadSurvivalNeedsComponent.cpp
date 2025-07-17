@@ -958,6 +958,15 @@ void UNomadSurvivalNeedsComponent::RemoveAllSurvivalEffects()
     StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"));
     StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"));
     StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia"));
+    
+    // Ensure movement speed is properly synced after removing all survival effects
+    // This ensures any lingering movement modifiers are cleaned up
+    ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
+    if (OwnerCharacter)
+    {
+        UNomadBaseStatusEffect::SyncMovementSpeedFromStatusEffects(OwnerCharacter);
+        UE_LOG_SURVIVAL(Verbose, TEXT("[SURVIVAL] Synced movement speed after removing all survival effects"));
+    }
 }
 
 // ======== Legacy Status Effect System (Compatibility) ========
