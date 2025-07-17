@@ -180,9 +180,14 @@ public:
     UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
     void RemoveJumpBlockTag(ACharacter* Character);
 
-    /** Applies a movement speed modifier through the status effect system instead of direct manipulation. */
+    /** Syncs movement speed modifiers but does not apply new modifiers.
+     * Use this method after modifying movement speed attributes externally.
+     * 
+     * Previous Approach: Hardcoded RPG.Attributes.MovementSpeed
+     * Current Approach: Config-driven gameplay tag approach.
+     */
     UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Movement")
-    void ApplyMovementSpeedModifier(ACharacter* Character, float Multiplier);
+    void SyncMovementSpeedModifier(ACharacter* Character, float Multiplier);
 
     /** Removes movement speed modifier applied by this status effect. */
     UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Movement")

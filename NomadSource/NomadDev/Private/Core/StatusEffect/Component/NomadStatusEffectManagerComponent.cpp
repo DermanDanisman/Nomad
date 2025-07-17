@@ -128,6 +128,83 @@ UNomadSurvivalStatusEffect* UNomadStatusEffectManagerComponent::ApplyHazardDoTEf
     return Effect;
 }
 
+void UNomadStatusEffectManagerComponent::ApplyTimedStatusEffect(TSubclassOf<UNomadBaseStatusEffect> StatusEffectClass, float Duration)
+{
+    if (!StatusEffectClass)
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Cannot apply timed status effect - effect class is null"));
+        return;
+    }
+
+    if (Duration <= 0.0f)
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Cannot apply timed status effect - duration must be > 0 (got %f)"), Duration);
+        return;
+    }
+
+    // Verify this is a timed status effect class
+    UObject* EffectCDO = StatusEffectClass->GetDefaultObject();
+    if (!EffectCDO || !EffectCDO->IsA(UNomadTimedStatusEffect::StaticClass()))
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] ApplyTimedStatusEffect requires UNomadTimedStatusEffect class, got %s"), 
+                          StatusEffectClass ? *StatusEffectClass->GetName() : TEXT("null"));
+        return;
+    }
+
+    // Create the timed effect instance
+    UNomadTimedStatusEffect* TimedEffect = NewObject<UNomadTimedStatusEffect>(GetOwner(), StatusEffectClass);
+    if (TimedEffect)
+    {
+        // Set the duration
+        TimedEffect->SetDuration(Duration);
+        
+        // Apply the effect through the standard system
+        AddStatusEffect(TimedEffect, GetOwner());
+        TimedEffect->Nomad_OnStatusEffectStarts(Cast<ACharacter>(GetOwner()));
+        
+        UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Applied timed status effect %s with duration %f seconds"), 
+                          *StatusEffectClass->GetName(), Duration);
+    }
+    else
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Failed to create timed status effect instance"));
+    }
+}
+
+void UNomadStatusEffectManagerComponent::ApplyInfiniteStatusEffect(TSubclassOf<UNomadBaseStatusEffect> StatusEffectClass)
+{
+    if (!StatusEffectClass)
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Cannot apply infinite status effect - effect class is null"));
+        return;
+    }
+
+    // Verify this is an infinite status effect class
+    UObject* EffectCDO = StatusEffectClass->GetDefaultObject();
+    if (!EffectCDO || !EffectCDO->IsA(UNomadInfiniteStatusEffect::StaticClass()))
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] ApplyInfiniteStatusEffect requires UNomadInfiniteStatusEffect class, got %s"), 
+                          StatusEffectClass ? *StatusEffectClass->GetName() : TEXT("null"));
+        return;
+    }
+
+    // Create the infinite effect instance
+    UNomadInfiniteStatusEffect* InfiniteEffect = NewObject<UNomadInfiniteStatusEffect>(GetOwner(), StatusEffectClass);
+    if (InfiniteEffect)
+    {
+        // Apply the effect through the standard system
+        AddStatusEffect(InfiniteEffect, GetOwner());
+        InfiniteEffect->Nomad_OnStatusEffectStarts(Cast<ACharacter>(GetOwner()));
+        
+        UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Applied infinite status effect %s"), 
+                          *StatusEffectClass->GetName());
+    }
+    else
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Failed to create infinite status effect instance"));
+    }
+}
+
 // =====================================================
 //         LIFECYCLE MANAGEMENT
 // =====================================================
