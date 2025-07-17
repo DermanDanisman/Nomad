@@ -269,8 +269,12 @@ public:
      * Applies a timed status effect with the specified duration.
      * The effect will automatically be removed when the duration expires.
      * 
+     * Note: The Duration parameter is provided for API consistency and validation,
+     * but the actual effect duration is controlled by the status effect's config asset
+     * (UNomadTimedEffectConfig). This follows the data-driven design philosophy.
+     * 
      * @param StatusEffectClass The status effect class to apply (must be UNomadTimedStatusEffect or derived)
-     * @param Duration Duration in seconds for the effect (must be > 0)
+     * @param Duration Duration in seconds for validation (must be > 0, actual duration from config)
      */
     UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Application")
     void ApplyTimedStatusEffect(TSubclassOf<UNomadBaseStatusEffect> StatusEffectClass, float Duration);
