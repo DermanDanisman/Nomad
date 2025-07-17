@@ -7,6 +7,7 @@
 #include "GameplayTagContainer.h"
 #include "Components/ACFCharacterMovementComponent.h"
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
+#include "Core/StatusEffect/Movement/NomadMovementSpeedStatusEffect.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 void UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(ACharacter* Character)
@@ -166,4 +167,123 @@ void UNomadStatusEffectGameplayHelpers::RemoveMovementSpeedStatusEffect(
     
     // Sync movement speed after removing the effect
     SyncMovementSpeedFromDefaultAttribute(Character);
+}
+
+bool UNomadStatusEffectGameplayHelpers::HasActiveMovementSpeedEffects(ACharacter* Character)
+{
+    /**
+     * NEW: Checks if any movement speed effects are currently active.
+     */
+    if (!Character) return false;
+    
+    auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
+    if (!SEManager) return false;
+    
+    // Check for common movement speed effect tags
+    static const TArray<FGameplayTag> MovementEffectTags = {
+        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedBoost"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedPenalty"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.Disabled"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Starvation"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia")
+    };
+    
+    for (const FGameplayTag& Tag : MovementEffectTags)
+    {
+        if (SEManager->HasStatusEffect(Tag))
+        {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetActiveMovementSpeedEffectTags(ACharacter* Character)
+{
+    /**
+     * NEW: Gets all active movement speed effect tags on the character.
+     */
+    TArray<FGameplayTag> ActiveTags;
+    
+    if (!Character) return ActiveTags;
+    
+    auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
+    if (!SEManager) return ActiveTags;
+    
+    // Check for common movement speed effect tags
+    static const TArray<FGameplayTag> MovementEffectTags = {
+        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedBoost"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedPenalty"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.Disabled"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Starvation"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"),
+        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia")
+    };
+    
+    for (const FGameplayTag& Tag : MovementEffectTags)
+    {
+        if (SEManager->HasStatusEffect(Tag))
+        {
+            ActiveTags.Add(Tag);
+        }
+    }
+    
+    return ActiveTags;
+}
+
+void UNomadStatusEffectGameplayHelpers::ApplySurvivalMovementPenalty(
+    ACharacter* Character,
+    ESurvivalSeverity PenaltyLevel)
+{
+    /**
+     * NEW: Helper method to apply standard survival movement penalty.
+     * This replaces hardcoded movement slowing with a data-driven status effect approach.
+     */
+    if (!Character) return;
+    
+    // Remove any existing survival movement penalty first
+    RemoveSurvivalMovementPenalty(Character);
+    
+    // Determine which status effect to apply based on penalty level
+    TSubclassOf<UNomadBaseStatusEffect> EffectClass = nullptr;
+    
+    switch (PenaltyLevel)
+    {
+        case ESurvivalSeverity::Mild:
+            // Apply mild speed penalty - typically 10-20% reduction
+            EffectClass = UNomadSpeedPenaltyStatusEffect::StaticClass();
+            break;
+        case ESurvivalSeverity::Heavy:
+            // Apply heavy speed penalty - typically 30-50% reduction  
+            EffectClass = UNomadSpeedPenaltyStatusEffect::StaticClass();
+            break;
+        case ESurvivalSeverity::Severe:
+        case ESurvivalSeverity::Extreme:
+            // Apply severe movement restriction - typically 60-80% reduction
+            EffectClass = UNomadMovementDisabledStatusEffect::StaticClass();
+            break;
+        default:
+            return; // No penalty for None severity
+    }
+    
+    if (EffectClass)
+    {
+        ApplyMovementSpeedStatusEffect(Character, EffectClass, 0.0f); // Infinite duration
+    }
+}
+
+void UNomadStatusEffectGameplayHelpers::RemoveSurvivalMovementPenalty(ACharacter* Character)
+{
+    /**
+     * NEW: Helper method to remove survival movement penalties.
+     */
+    if (!Character) return;
+    
+    // Remove all types of survival-related movement penalties
+    RemoveMovementSpeedStatusEffect(Character, FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedPenalty"));
+    RemoveMovementSpeedStatusEffect(Character, FGameplayTag::RequestGameplayTag("StatusEffect.Movement.Disabled"));
 }

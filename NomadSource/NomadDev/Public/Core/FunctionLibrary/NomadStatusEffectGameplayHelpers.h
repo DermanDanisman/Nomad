@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Core/Component/NomadSurvivalNeedsComponent.h"
 #include "NomadStatusEffectGameplayHelpers.generated.h"
 
 /**
@@ -175,6 +176,46 @@ public:
     static void RemoveMovementSpeedStatusEffect(
         ACharacter* Character,
         const FGameplayTag& EffectTag);
+
+    /**
+     * Utility method to check if any movement speed effects are currently active.
+     * This can be used by UI systems to show movement status indicators.
+     * 
+     * @param Character The character to check.
+     * @return true if any movement speed effects are active; false otherwise.
+     */
+    UFUNCTION(BlueprintPure, Category="Nomad|Movement")
+    static bool HasActiveMovementSpeedEffects(ACharacter* Character);
+
+    /**
+     * Gets all active movement speed effect tags on the character.
+     * Useful for debugging and UI display of current movement modifiers.
+     * 
+     * @param Character The character to check.
+     * @return Array of gameplay tags for active movement speed effects.
+     */
+    UFUNCTION(BlueprintPure, Category="Nomad|Movement")
+    static TArray<FGameplayTag> GetActiveMovementSpeedEffectTags(ACharacter* Character);
+
+    /**
+     * Helper method to apply standard survival movement penalty.
+     * This replaces hardcoded movement slowing with a data-driven status effect approach.
+     * 
+     * @param Character The character to apply the penalty to.
+     * @param PenaltyLevel Severity of the penalty (Mild, Heavy, Severe).
+     */
+    UFUNCTION(BlueprintCallable, Category="Nomad|Survival")
+    static void ApplySurvivalMovementPenalty(
+        ACharacter* Character,
+        ESurvivalSeverity PenaltyLevel);
+
+    /**
+     * Helper method to remove survival movement penalties.
+     * 
+     * @param Character The character to remove penalties from.
+     */
+    UFUNCTION(BlueprintCallable, Category="Nomad|Survival")
+    static void RemoveSurvivalMovementPenalty(ACharacter* Character);
 
 
 };
