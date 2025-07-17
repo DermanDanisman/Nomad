@@ -4,6 +4,8 @@
 #include "Core/Component/NomadAfflictionComponent.h"
 #include "Core/Debug/NomadLogCategories.h"
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
+#include "Core/Data/StatusEffect/NomadStatusEffectConfigBase.h"
+#include "Engine/Texture2D.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "ARSStatisticsComponent.h"

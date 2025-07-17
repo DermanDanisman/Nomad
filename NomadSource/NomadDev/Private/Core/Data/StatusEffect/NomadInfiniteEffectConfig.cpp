@@ -1,7 +1,6 @@
 // Copyright (C) Developed by Gamegine, Published by Gamegine 2025. All Rights Reserved.
 
 #include "Core/Data/StatusEffect/NomadInfiniteEffectConfig.h"
-#include "Core/StatusEffect/NomadBaseStatusEffect.h"
 #include "Core/Debug/NomadLogCategories.h"
 #include "Engine/Engine.h"
 #include "Misc/DataValidation.h"
@@ -184,64 +183,64 @@ TArray<FString> UNomadInfiniteEffectConfig::GetValidationErrors() const
 
 FString UNomadInfiniteEffectConfig::GetEffectDescription() const
 {
-    FString Description = FString::Printf(TEXT("Infinite Effect: %s\n"), *EffectName.ToString());
+    FString LocalDescription = FString::Printf(TEXT("Infinite Effect: %s\n"), *EffectName.ToString());
     
-    Description += FString::Printf(TEXT("Category: %s\n"), 
+    LocalDescription += FString::Printf(TEXT("Category: %s\n"), 
                                   *StaticEnum<ENomadStatusCategory>()->GetNameStringByValue((int64)Category));
 
     if (bHasPeriodicTick)
     {
-        Description += FString::Printf(TEXT("Ticks every %.1f seconds\n"), TickInterval);
+        LocalDescription += FString::Printf(TEXT("Ticks every %.1f seconds\n"), TickInterval);
     }
     else
     {
-        Description += TEXT("No periodic ticking\n");
+        LocalDescription += TEXT("No periodic ticking\n");
     }
 
-    Description += FString::Printf(TEXT("Manual removal: %s\n"), 
+    LocalDescription += FString::Printf(TEXT("Manual removal: %s\n"), 
                                   bCanBeManuallyRemoved ? TEXT("Allowed") : TEXT("Restricted"));
 
-    Description += FString::Printf(TEXT("Persists through save/load: %s\n"), 
+    LocalDescription += FString::Printf(TEXT("Persists through save/load: %s\n"), 
                                   bPersistThroughSaveLoad ? TEXT("Yes") : TEXT("No"));
 
     if (bCanStack)
     {
         if (MaxStackSize == 0)
         {
-            Description += TEXT("Unlimited stacking\n");
+            LocalDescription += TEXT("Unlimited stacking\n");
         }
         else
         {
-            Description += FString::Printf(TEXT("Max %d stacks\n"), MaxStackSize);
+            LocalDescription += FString::Printf(TEXT("Max %d stacks\n"), MaxStackSize);
         }
     }
     else
     {
-        Description += TEXT("No stacking (single instance)\n");
+        LocalDescription += TEXT("No stacking (single instance)\n");
     }
 
     const int32 TotalMods = GetTotalStatModificationCount();
     if (TotalMods > 0)
     {
-        Description += FString::Printf(TEXT("%d total stat modifications\n"), TotalMods);
+        LocalDescription += FString::Printf(TEXT("%d total stat modifications\n"), TotalMods);
     }
 
     if (bTriggerActivationChainEffects && ActivationChainEffects.Num() > 0)
     {
-        Description += FString::Printf(TEXT("%d activation chain effects\n"), ActivationChainEffects.Num());
+        LocalDescription += FString::Printf(TEXT("%d activation chain effects\n"), ActivationChainEffects.Num());
     }
 
     if (bTriggerDeactivationChainEffects && DeactivationChainEffects.Num() > 0)
     {
-        Description += FString::Printf(TEXT("%d deactivation chain effects\n"), DeactivationChainEffects.Num());
+        LocalDescription += FString::Printf(TEXT("%d deactivation chain effects\n"), DeactivationChainEffects.Num());
     }
 
     if (!DeveloperNotes.IsEmpty())
     {
-        Description += FString::Printf(TEXT("\nNotes: %s"), *DeveloperNotes);
+        LocalDescription += FString::Printf(TEXT("\nNotes: %s"), *DeveloperNotes);
     }
 
-    return Description;
+    return LocalDescription;
 }
 
 bool UNomadInfiniteEffectConfig::CanBeRemovedByTag(const FGameplayTag& RemovalTag) const

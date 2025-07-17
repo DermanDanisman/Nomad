@@ -9,6 +9,7 @@
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
 #include "Core/Component/NomadSurvivalNeedsComponent.h"
 // Movement speed modifications are now handled through existing status effect types with configs
+#include "Core/StatusEffect/NomadBaseStatusEffect.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 void UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(ACharacter* Character)
@@ -256,9 +257,6 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetConfigurableMovementS
             FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"),
             FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia")
         };
-        
-        UE_LOG_AFFLICTION(Log, TEXT("[HELPERS] Initialized %d configurable movement speed effect tags"), 
-                          ConfigurableTags.Num());
     }
     
     return ConfigurableTags;
@@ -312,9 +310,6 @@ void UNomadStatusEffectGameplayHelpers::ApplySurvivalMovementPenalty(
     // PersistentAttributeModifier values for movement speed reduction
     // 
     // Example: SEManager->ApplyInfiniteStatusEffect(UNomadSurvivalStatusEffect::StaticClass(), EffectTag);
-    
-    UE_LOG_AFFLICTION(Warning, TEXT("[SURVIVAL] ApplySurvivalMovementPenalty requires config assets for tag: %s"), 
-        *EffectTag.ToString());
 }
 
 void UNomadStatusEffectGameplayHelpers::RemoveSurvivalMovementPenalty(ACharacter* Character)

@@ -97,6 +97,9 @@ protected:
     /** Internal current stack count (updated by manager) */
     int32 StackCount = 1;
 
+    /** The duration of the timed effect */
+    float Duration = 0.0f;
+
 public:
     // =====================================================
     //         CONFIGURATION ACCESS
@@ -104,6 +107,9 @@ public:
 
     /** Loads configuration asset (synchronously, safe for runtime use) */
     virtual UNomadTimedEffectConfig* GetEffectConfig() const override;
+
+    /** Sets the duration of the timed effect */
+    void SetDuration(float InDuration);
     
     // =====================================================
     //         STACKING/REFRESH LOGIC
@@ -209,6 +215,8 @@ protected:
 
     /** Sets up timers for duration and periodic ticks based on config */
     void SetupTimers();
+    
+    float CalculateDuration(const UNomadTimedEffectConfig* Config) const;
 
     /** Clears timers on end, stacking, or removal */
     void ClearTimers();

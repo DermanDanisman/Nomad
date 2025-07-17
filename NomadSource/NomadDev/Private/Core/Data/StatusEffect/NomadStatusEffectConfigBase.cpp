@@ -1,457 +1,341 @@
 // Copyright (C) Developed by Gamegine, Published by Gamegine 2025. All Rights Reserved.
 
-#include "Core/StatusEffect/NomadBaseStatusEffect.h"
-#include "Core/Component/NomadAfflictionComponent.h"
+#include "Core/Data/StatusEffect/NomadStatusEffectConfigBase.h"
+#include "Core/StatusEffect/NomadStatusTypes.h"
 #include "Core/Debug/NomadLogCategories.h"
-#include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
-#include "GameFramework/Character.h"
-#include "Kismet/GameplayStatics.h"
+#include "Misc/DataValidation.h"
 
 // =====================================================
 //         CONSTRUCTOR & INITIALIZATION
 // =====================================================
 
-UNomadBaseStatusEffect::UNomadBaseStatusEffect()
+UNomadStatusEffectConfigBase::UNomadStatusEffectConfigBase()
 {
-    // Initialize all runtime state to safe defaults
-    bIsInitialized = false;
-    EffectState = EEffectLifecycleState::Removed;
-    DamageCauser = nullptr;
-    
-    // Log constructor for debugging memory issues
-    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] Status effect constructed"));
+    // Initialize basic info
+    EffectName = FText::FromString(TEXT("Unnamed Effect"));
+    Description = FText::FromString(TEXT("No description provided"));
+    Icon = nullptr;
+    EffectTag = FGameplayTag();
+    Category = ENomadStatusCategory::Neutral;
+
+    // Initialize application mode
+    ApplicationMode = EStatusEffectApplicationMode::StatModification;
+    DamageTypeClass = nullptr;
+    bCustomDamageCalculation = false;
+    DamageStatisticMods.Empty();
+
+    // Initialize behavior
+    bShowNotifications = true;
+    bCanStack = false;
+    MaxStackSize = 1;
+
+    // Initialize blocking
+    BlockingTags = FGameplayTagContainer();
+
+    // Initialize audio/visual
+    StartSound = nullptr;
+    EndSound = nullptr;
+    AttachedEffect = nullptr;
+    AttachedNiagaraEffect = nullptr;
+
+    // Initialize notifications
+    NotificationColor = FLinearColor::Transparent;
+    NotificationDuration = 4.0f;
+    AppliedMessage = FText();
+    RemovedMessage = FText();
+
+    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[CONFIG] Base status effect config constructed"));
 }
 
 // =====================================================
-//         CONFIGURATION ACCESS & APPLICATION
+//         UTILITY FUNCTIONS
 // =====================================================
 
-UNomadStatusEffectConfigBase* UNomadBaseStatusEffect::GetEffectConfig() const
+UTexture2D* UNomadStatusEffectConfigBase::GetNotificationIcon() const
 {
-    // Loads the configuration asset for this effect (synchronously).
-    // This is safe for runtime use as effects need their config immediately.
-    if (EffectConfig.IsNull())
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Effect config is null"));
-        return nullptr;
-    }
-    
-    UNomadStatusEffectConfigBase* LoadedConfig = EffectConfig.LoadSynchronous();
-    if (!LoadedConfig)
-    {
-        UE_LOG_AFFLICTION(Error, TEXT("[BASE] Failed to load effect config asset"));
-    }
-    
-    return LoadedConfig;
+    return Icon.IsValid() ? Icon.Get() : nullptr;
 }
 
-void UNomadBaseStatusEffect::ApplyBaseConfiguration()
+FLinearColor UNomadStatusEffectConfigBase::GetNotificationColor() const
 {
-    // Loads the config asset and applies all config-driven values (tag, icon, etc).
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    if (!Config)
+    // If a custom color is set (alpha > 0), use it
+    if (NotificationColor.A > 0.0f)
     {
-        UE_LOG_AFFLICTION(Error, TEXT("[BASE] Cannot apply configuration - config asset is null"));
-        return;
+        return NotificationColor;
     }
 
-    if (!Config->IsConfigValid())
+    // Otherwise, use category-based color
+    switch (Category)
     {
-        UE_LOG_AFFLICTION(Error, TEXT("[BASE] Base configuration validation failed for effect %s"), 
-                          *Config->EffectName.ToString());
-        return;
+        case ENomadStatusCategory::Positive:
+            return FLinearColor::Green;
+        case ENomadStatusCategory::Negative:
+            return FLinearColor::Red;
+        case ENomadStatusCategory::Neutral:
+        default:
+            return FLinearColor::White;
+    }
+}
+
+FText UNomadStatusEffectConfigBase::GetNotificationMessage(bool bWasAdded) const
+{
+    // Use custom messages if provided
+    if (bWasAdded && !AppliedMessage.IsEmpty())
+    {
+        return AppliedMessage;
     }
     
-    // Apply all configuration values
-    LoadConfigurationValues();
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[BASE] Base configuration applied successfully: %s"), 
-                      *Config->EffectName.ToString());
-}
-
-bool UNomadBaseStatusEffect::HasValidBaseConfiguration() const
-{
-    // Returns true if config asset is loaded and passes validation.
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    return Config && Config->IsConfigValid();
-}
-
-// =====================================================
-//         STATUS EFFECT PROPERTIES
-// =====================================================
-
-ENomadStatusCategory UNomadBaseStatusEffect::GetStatusCategory_Implementation() const
-{
-    // Returns the status category from the config, or Neutral if not set.
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    if (Config)
+    if (!bWasAdded && !RemovedMessage.IsEmpty())
     {
-        return Config->Category;
+        return RemovedMessage;
     }
-    
-    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] No config found, defaulting to Neutral category"));
-    return ENomadStatusCategory::Neutral;
-}
 
-void UNomadBaseStatusEffect::ApplyTagFromConfig()
-{
-    // Applies the effect's gameplay tag from the config to this effect instance.
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    if (Config && Config->EffectTag.IsValid())
+    // Generate fallback messages
+    if (bWasAdded)
     {
-        SetStatusEffectTag(Config->EffectTag);
-        UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Applied tag from config: %s"), 
-                          *Config->EffectTag.ToString());
+        return FText::Format(
+            NSLOCTEXT("StatusEffect", "Applied", "You are now affected by {0}"),
+            EffectName
+        );
     }
     else
     {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot apply tag - config missing or tag invalid"));
-    }
-}
-
-void UNomadBaseStatusEffect::ApplyIconFromConfig()
-{
-    // Applies the effect's icon from the config to this effect instance.
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    if (Config && !Config->Icon.IsNull())
-    {
-        UTexture2D* LoadedIcon = Config->Icon.LoadSynchronous();
-        if (LoadedIcon)
-        {
-            SetStatusIcon(LoadedIcon);
-            UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Applied icon from config"));
-        }
-        else
-        {
-            UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Failed to load icon from config"));
-        }
-    }
-    else
-    {
-        UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] No icon specified in config"));
+        return FText::Format(
+            NSLOCTEXT("StatusEffect", "Removed", "You recovered from {0}"),
+            EffectName
+        );
     }
 }
 
 // =====================================================
-//         LIFECYCLE: START / END
+//         VALIDATION SYSTEM
 // =====================================================
 
-void UNomadBaseStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Character)
+bool UNomadStatusEffectConfigBase::IsConfigValid() const
 {
-    // Called when the effect starts on a character (ACF base override).
-    // Handles config-driven initialization, blocking tags, and plays start sound.
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[BASE] Status effect starting on %s"), 
-                      Character ? *Character->GetName() : TEXT("Unknown"));
-    
-    // Call parent implementation first
-    Super::OnStatusEffectStarts_Implementation(Character);
-    
-    // Set our runtime state
-    CharacterOwner = Character;
-    EffectState = EEffectLifecycleState::Active;
-    
-    // Initialize the Nomad-specific functionality
-    InitializeNomadEffect();
-
-    // Apply blocking tags if configured
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    if (Config && Config->BlockingTags.Num() > 0 && Character)
+    // Check basic requirements
+    if (EffectName.IsEmpty())
     {
-        if (UNomadStatusEffectManagerComponent* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>())
-        {
-            for (const FGameplayTag& Tag : Config->BlockingTags)
+        UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Effect name cannot be empty"));
+        return false;
+    }
+
+    if (!EffectTag.IsValid())
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Effect tag must be valid"));
+        return false;
+    }
+
+    // Validate stacking configuration
+    if (bCanStack && MaxStackSize <= 1)
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Max stacks must be > 1 when stacking is enabled"));
+        return false;
+    }
+
+    // Validate hybrid system configuration
+    switch (ApplicationMode)
+    {
+        case EStatusEffectApplicationMode::DamageEvent:
+        case EStatusEffectApplicationMode::Both:
             {
-                if (Tag.IsValid())
+                if (!DamageTypeClass)
                 {
-                    SEManager->AddBlockingTag(Tag);
-                    UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Applied blocking tag: %s"), 
-                                      *Tag.ToString());
+                    UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] DamageTypeClass required for DamageEvent/Both modes"));
+                    return false;
                 }
+                
+                if (DamageStatisticMods.Num() == 0)
+                {
+                    UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] DamageStatisticMods required for DamageEvent/Both modes"));
+                    return false;
+                }
+                break;
+            }
+        case EStatusEffectApplicationMode::StatModification:
+        default:
+            // No additional validation needed for stat modification mode
+            break;
+    }
+
+    // Validate notification settings
+    if (NotificationDuration <= 0.0f)
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] Notification duration must be > 0"));
+        return false;
+    }
+
+    return true;
+}
+
+TArray<FString> UNomadStatusEffectConfigBase::GetValidationErrors() const
+{
+    TArray<FString> Errors;
+
+    // Basic validation
+    if (EffectName.IsEmpty())
+    {
+        Errors.Add(TEXT("Effect name cannot be empty"));
+    }
+
+    if (!EffectTag.IsValid())
+    {
+        Errors.Add(TEXT("Effect tag must be valid"));
+    }
+
+    // Stacking validation
+    if (bCanStack && MaxStackSize <= 1)
+    {
+        Errors.Add(TEXT("Max stacks must be > 1 when stacking is enabled"));
+    }
+
+    if (MaxStackSize < 1)
+    {
+        Errors.Add(TEXT("Max stacks cannot be less than 1"));
+    }
+
+    // Hybrid system validation
+    switch (ApplicationMode)
+    {
+        case EStatusEffectApplicationMode::DamageEvent:
+        case EStatusEffectApplicationMode::Both:
+            {
+                if (!DamageTypeClass)
+                {
+                    Errors.Add(TEXT("DamageTypeClass must be set for DamageEvent or Both modes"));
+                }
+                
+                if (DamageStatisticMods.Num() == 0)
+                {
+                    Errors.Add(TEXT("DamageStatisticMods must have at least one entry for DamageEvent or Both modes"));
+                }
+                
+                // Validate damage stat mods
+                for (int32 i = 0; i < DamageStatisticMods.Num(); i++)
+                {
+                    const FStatisticValue& StatMod = DamageStatisticMods[i];
+                    if (!StatMod.Statistic.IsValid())
+                    {
+                        Errors.Add(FString::Printf(TEXT("DamageStatisticMods[%d] has invalid statistic tag"), i));
+                    }
+                }
+                break;
+            }
+        case EStatusEffectApplicationMode::StatModification:
+        default:
+            // No additional validation for stat modification mode
+            break;
+    }
+
+    // Notification validation
+    if (NotificationDuration <= 0.0f)
+    {
+        Errors.Add(TEXT("Notification duration must be greater than 0"));
+    }
+
+    return Errors;
+}
+
+#if WITH_EDITOR
+void UNomadStatusEffectConfigBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+
+    if (PropertyChangedEvent.Property)
+    {
+        const FName PropertyName = PropertyChangedEvent.Property->GetFName();
+
+        // Auto-correct max stack size
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadStatusEffectConfigBase, MaxStackSize))
+        {
+            MaxStackSize = FMath::Max(1, MaxStackSize);
+            
+            // Auto-enable stacking if max stacks > 1
+            if (MaxStackSize > 1)
+            {
+                bCanStack = true;
+            }
+            else if (MaxStackSize == 1)
+            {
+                bCanStack = false;
             }
         }
-        else
+
+        // Auto-update stacking settings
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadStatusEffectConfigBase, bCanStack))
         {
-            UE_LOG_AFFLICTION(Warning, TEXT("[BASE] No status effect manager found for blocking tags"));
-        }
-    }
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[BASE] Status effect started successfully"));
-}
-
-void UNomadBaseStatusEffect::Nomad_OnStatusEffectStarts(ACharacter* Character)
-{
-    // Public interface for starting effects - ensures consistent activation
-    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] Nomad_OnStatusEffectStarts called"));
-    OnStatusEffectStarts_Implementation(Character);
-}
-
-void UNomadBaseStatusEffect::Nomad_OnStatusEffectEnds()
-{
-    // Cleanly ends the effect and transitions state for analytics/cleanup.
-    // Prevents double-removal and ensures proper state transitions.
-    
-    if (EffectState != EEffectLifecycleState::Active)
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Attempted to end effect that's not active (state: %d)"), 
-                          (int32)EffectState);
-        return;
-    }
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[BASE] Ending status effect"));
-    
-    // Transition to ending state
-    EffectState = EEffectLifecycleState::Ending;
-    
-    // Call the implementation
-    OnStatusEffectEnds_Implementation();
-    
-    // Mark as completely removed
-    EffectState = EEffectLifecycleState::Removed;
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[BASE] Status effect ended successfully"));
-}
-
-void UNomadBaseStatusEffect::OnStatusEffectEnds_Implementation()
-{
-    // Called when the effect is removed from the character (ACF base override).
-    // Handles sound playback, blocking tag removal, and cleanup.
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[BASE] Status effect ending implementation"));
-
-    // Play end sound before any cleanup
-    PlayEndSound();
-
-    // Remove blocking tags if they were applied
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    if (Config && Config->BlockingTags.Num() > 0 && CharacterOwner)
-    {
-        if (UNomadStatusEffectManagerComponent* SEManager = CharacterOwner->FindComponentByClass<UNomadStatusEffectManagerComponent>())
-        {
-            for (const FGameplayTag& Tag : Config->BlockingTags)
+            if (!bCanStack)
             {
-                if (Tag.IsValid())
-                {
-                    SEManager->RemoveBlockingTag(Tag);
-                    UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Removed blocking tag: %s"), 
-                                      *Tag.ToString());
-                }
+                MaxStackSize = 1;
+            }
+            else if (MaxStackSize <= 1)
+            {
+                MaxStackSize = 5; // Reasonable default
+            }
+        }
+
+        // Validate notification duration
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadStatusEffectConfigBase, NotificationDuration))
+        {
+            NotificationDuration = FMath::Max(0.1f, NotificationDuration);
+        }
+
+        // Clear damage stats if switching to StatModification mode
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadStatusEffectConfigBase, ApplicationMode))
+        {
+            if (ApplicationMode == EStatusEffectApplicationMode::StatModification)
+            {
+                DamageStatisticMods.Empty();
             }
         }
     }
-
-    // Call parent implementation
-    Super::OnStatusEffectEnds_Implementation();
-
-    // Reset initialization state
-    bIsInitialized = false;
-    
-    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] End implementation completed"));
 }
 
-// =====================================================
-//         INITIALIZATION
-// =====================================================
-
-void UNomadBaseStatusEffect::InitializeNomadEffect()
+EDataValidationResult UNomadStatusEffectConfigBase::IsDataValid(FDataValidationContext& Context) const
 {
-    // Applies configuration, plays start sound, and sets the initialized flag.
-    // Prevents double-initialization and ensures proper setup.
-    
-    if (bIsInitialized)
+    EDataValidationResult Result = Super::IsDataValid(Context);
+
+    // Get validation errors and add them to context
+    const TArray<FString> ErrorStrings = GetValidationErrors();
+    for (const FString& Error : ErrorStrings)
     {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Effect already initialized, skipping"));
-        return;
+        Context.AddError(FText::FromString(Error));
+        Result = EDataValidationResult::Invalid;
     }
-    
-    if (!CharacterOwner)
+
+    // Add warnings for missing optional data
+    if (Description.IsEmpty())
     {
-        UE_LOG_AFFLICTION(Error, TEXT("[BASE] Cannot initialize effect - no character owner"));
-        return;
+        Context.AddWarning(FText::FromString(TEXT("Description is empty - consider adding for designers")));
     }
-    
-    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] Initializing Nomad effect"));
-    
-    // Apply configuration from data asset
-    ApplyBaseConfiguration();
-    
-    // Play start sound
-    PlayStartSound();
-    
-    // Mark as initialized
-    bIsInitialized = true;
-    
-    UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Nomad effect initialized successfully"));
+
+    if (Icon.IsNull())
+    {
+        Context.AddWarning(FText::FromString(TEXT("No icon set - effect will use default in UI")));
+    }
+
+    if (StartSound.IsNull() && EndSound.IsNull())
+    {
+        Context.AddWarning(FText::FromString(TEXT("No audio feedback configured")));
+    }
+
+    // Hybrid system warnings
+    if (ApplicationMode == EStatusEffectApplicationMode::Both)
+    {
+        Context.AddWarning(FText::FromString(TEXT("Both mode applies stat mods AND damage - ensure this is intended")));
+    }
+
+    if (bCustomDamageCalculation && ApplicationMode == EStatusEffectApplicationMode::StatModification)
+    {
+        Context.AddWarning(FText::FromString(TEXT("Custom damage calculation enabled but using StatModification mode")));
+    }
+
+    if (Result == EDataValidationResult::Valid)
+    {
+        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Base config validation passed: %s"), 
+                          *EffectName.ToString());
+    }
+
+    return Result;
 }
-
-// =====================================================
-//         BLOCKING TAG UTILITIES
-// =====================================================
-
-void UNomadBaseStatusEffect::ApplySprintBlockTag(ACharacter* Character)
-{
-    // Utility function to block sprinting while this effect is active.
-    // Commonly used by movement-impairing effects.
-    
-    if (!Character)
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot apply sprint block - no character"));
-        return;
-    }
-    
-    if (UNomadStatusEffectManagerComponent* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>())
-    {
-        SEManager->AddBlockingTag(FGameplayTag::RequestGameplayTag(TEXT("Status.Block.Sprint")));
-        UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Applied sprint blocking tag"));
-    }
-    else
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] No status effect manager found for sprint block"));
-    }
-}
-
-void UNomadBaseStatusEffect::RemoveSprintBlockTag(ACharacter* Character)
-{
-    // Utility function to remove sprint blocking when effect ends.
-    
-    if (!Character)
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot remove sprint block - no character"));
-        return;
-    }
-    
-    if (UNomadStatusEffectManagerComponent* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>())
-    {
-        SEManager->RemoveBlockingTag(FGameplayTag::RequestGameplayTag(TEXT("Status.Block.Sprint")));
-        UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Removed sprint blocking tag"));
-    }
-    else
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] No status effect manager found for sprint unblock"));
-    }
-}
-
-// =====================================================
-//         AUDIO/VISUAL HOOKS
-// =====================================================
-
-void UNomadBaseStatusEffect::PlayStartSound()
-{
-    // Loads and plays the start sound, triggers C++ and Blueprint events.
-    
-    if (!CharacterOwner)
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot play start sound - no character owner"));
-        return;
-    }
-    
-    USoundBase* SoundToPlay = nullptr;
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    
-    if (Config && !Config->StartSound.IsNull())
-    {
-        SoundToPlay = Config->StartSound.LoadSynchronous();
-    }
-    
-    if (SoundToPlay)
-    {
-        // Play the sound at character location
-        UGameplayStatics::PlaySoundAtLocation(
-            CharacterOwner->GetWorld(), 
-            SoundToPlay, 
-            CharacterOwner->GetActorLocation()
-        );
-        
-        // Trigger implementation hooks
-        OnStartSoundTriggered_Implementation(SoundToPlay);
-        OnStartSoundTriggered(SoundToPlay);
-        
-        UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Played start sound"));
-    }
-    else
-    {
-        UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] No start sound configured"));
-    }
-}
-
-void UNomadBaseStatusEffect::PlayEndSound()
-{
-    // Loads and plays the end sound, triggers C++ and Blueprint events.
-    
-    if (!CharacterOwner)
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot play end sound - no character owner"));
-        return;
-    }
-    
-    USoundBase* SoundToPlay = nullptr;
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    
-    if (Config && !Config->EndSound.IsNull())
-    {
-        SoundToPlay = Config->EndSound.LoadSynchronous();
-    }
-    
-    if (SoundToPlay)
-    {
-        // Play the sound at character location
-        UGameplayStatics::PlaySoundAtLocation(
-            CharacterOwner->GetWorld(), 
-            SoundToPlay, 
-            CharacterOwner->GetActorLocation()
-        );
-        
-        // Trigger implementation hooks
-        OnEndSoundTriggered_Implementation(SoundToPlay);
-        OnEndSoundTriggered(SoundToPlay);
-        
-        UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Played end sound"));
-    }
-    else
-    {
-        UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] No end sound configured"));
-    }
-}
-
-// =====================================================
-//         INTERNAL HELPERS
-// =====================================================
-
-void UNomadBaseStatusEffect::LoadConfigurationValues()
-{
-    // Applies tag and icon from config asset.
-    // Can be extended for additional config-driven properties.
-    
-    const UNomadStatusEffectConfigBase* Config = GetEffectConfig();
-    if (!Config)
-    {
-        UE_LOG_AFFLICTION(Error, TEXT("[BASE] Cannot load configuration values - config is null"));
-        return;
-    }
-    
-    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] Loading configuration values"));
-    
-    // Apply gameplay tag
-    ApplyTagFromConfig();
-    
-    // Apply icon
-    ApplyIconFromConfig();
-    
-    UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Configuration values loaded successfully"));
-}
-
-// =====================================================
-//         HYBRID STAT/DAMAGE APPLICATION
-// =====================================================
-
-void UNomadBaseStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>& InStatMods, AActor* InTarget, UObject* InEffectConfig)
-{
-    // Base implementation does nothing - child classes must override this.
-    // This allows for polymorphic behavior while keeping the base class abstract.
-    
-    UE_LOG_AFFLICTION(Warning, TEXT("[BASE] ApplyHybridEffect called on base class - override in derived classes"));
-    
-    // Log the parameters for debugging
-    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] Hybrid effect called with %d stat mods, target: %s"), 
-                      InStatMods.Num(), InTarget ? *InTarget->GetName() : TEXT("null"));
-}
+#endif

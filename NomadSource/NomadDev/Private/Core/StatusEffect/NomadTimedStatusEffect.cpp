@@ -38,6 +38,19 @@ UNomadTimedEffectConfig* UNomadTimedStatusEffect::GetEffectConfig() const
     return Cast<UNomadTimedEffectConfig>(EffectConfig.IsNull() ? nullptr : EffectConfig.LoadSynchronous());
 }
 
+void UNomadTimedStatusEffect::SetDuration(float InDuration)
+{
+    if (InDuration > 0.0f)
+    {
+        Duration = InDuration;
+        SetupTimers(); // Recalculate timers based on the new duration
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Invalid duration specified. Duration must be greater than 0."));
+    }
+}
+
 // =====================================================
 //         MANAGER INTEGRATION
 // =====================================================
@@ -260,38 +273,42 @@ void UNomadTimedStatusEffect::SetupTimers()
     UWorld* World = CharacterOwner->GetWorld();
     FTimerManager& TimerManager = World->GetTimerManager();
 
-    // Calculate total duration
-    float EndTime = 0.0f;
+    // Calculate duration
     if (Config->bIsPeriodic)
     {
-        if (Config->DurationMode == EEffectDurationMode::Duration)
-        {
-            EndTime = Config->EffectDuration;
-        }
-        else // EEffectDurationMode::Ticks
-        {
-            EndTime = Config->TickInterval * Config->NumTicks;
-        }
+        Duration = CalculateDuration(Config);
     }
     else
     {
-        // Non-periodic effects end immediately after start modifications
-        EndTime = 0.01f; // Very short delay to allow start effects to apply
+        Duration = Config->EffectDuration > 0.0f ? Config->EffectDuration : 0.01f; // Default to a short delay
     }
 
     // Set end timer
-    if (EndTime > 0.0f)
+    if (Duration > 0.0f)
     {
-        TimerManager.SetTimer(TimerHandle_End, this, &UNomadTimedStatusEffect::HandleEnd, EndTime, false);
-        UE_LOG_AFFLICTION(VeryVerbose, TEXT("[TIMED] End timer set for %.2f seconds"), EndTime);
+        TimerManager.SetTimer(TimerHandle_End, this, &UNomadTimedStatusEffect::HandleEnd, Duration, false);
+        UE_LOG_AFFLICTION(VeryVerbose, TEXT("[TIMED] End timer set for %.2f seconds"), Duration);
     }
 
     // Set periodic tick timer if enabled
-    if (Config->bIsPeriodic && Config->TickInterval > 0.0f)
+    if (Config->bIsPeriodic && Config->TickInterval > KINDA_SMALL_NUMBER)
     {
         TimerManager.SetTimer(TimerHandle_Tick, this, &UNomadTimedStatusEffect::HandleTick, Config->TickInterval, true);
         UE_LOG_AFFLICTION(VeryVerbose, TEXT("[TIMED] Tick timer set for %.2f second intervals"), Config->TickInterval);
     }
+}
+
+float UNomadTimedStatusEffect::CalculateDuration(const UNomadTimedEffectConfig* Config) const
+{
+    if (Config->DurationMode == EEffectDurationMode::Duration)
+    {
+        return Config->EffectDuration;
+    }
+    else if (Config->DurationMode == EEffectDurationMode::Ticks)
+    {
+        return Config->TickInterval * Config->NumTicks;
+    }
+    return 0.0f; // Default fallback
 }
 
 void UNomadTimedStatusEffect::ClearTimers()

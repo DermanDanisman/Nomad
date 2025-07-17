@@ -191,7 +191,6 @@ public:
     // =====================================================
 
     /** Returns a copy of all currently active effects. */
-    UFUNCTION(BlueprintPure, Category="Nomad|Status Effect|Query")
     TArray<FActiveEffect> GetActiveEffects() const { return ActiveEffects; }
 
     /** Finds the index of an active effect by tag. Returns INDEX_NONE if not found. */
