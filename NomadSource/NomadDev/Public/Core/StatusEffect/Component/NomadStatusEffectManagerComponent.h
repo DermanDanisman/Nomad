@@ -265,6 +265,25 @@ public:
     UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Specialized")
     UNomadSurvivalStatusEffect* ApplyHazardDoTEffectWithPercent(const TSubclassOf<UNomadBaseStatusEffect>& EffectClass, float DotPercent);
 
+    /**
+     * Applies a timed status effect with the specified duration.
+     * The effect will automatically be removed when the duration expires.
+     * 
+     * @param StatusEffectClass The status effect class to apply (must be UNomadTimedStatusEffect or derived)
+     * @param Duration Duration in seconds for the effect (must be > 0)
+     */
+    UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Application")
+    void ApplyTimedStatusEffect(TSubclassOf<UNomadBaseStatusEffect> StatusEffectClass, float Duration);
+
+    /**
+     * Applies an infinite status effect that persists until manually removed.
+     * The effect will remain active indefinitely until explicitly removed.
+     * 
+     * @param StatusEffectClass The status effect class to apply (must be UNomadInfiniteStatusEffect or derived)
+     */
+    UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Application")
+    void ApplyInfiniteStatusEffect(TSubclassOf<UNomadBaseStatusEffect> StatusEffectClass);
+
 protected:
     // =====================================================
     //         REPLICATION & NETWORKING

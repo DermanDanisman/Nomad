@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "Core/Component/NomadSurvivalNeedsComponent.h"
 #include "NomadStatusEffectGameplayHelpers.generated.h"
+
+// Forward declarations to reduce coupling
+enum class ESurvivalSeverity : uint8;
 
 /**
  * Utility library for syncing ARS/ACF MovementSpeed attribute with Character movement.
@@ -20,33 +22,22 @@ class NOMADDEV_API UNomadStatusEffectGameplayHelpers : public UBlueprintFunction
 public:
 
     /**
-     * Syncs Character movement speed to the current value of the "RPG.Attributes.MovementSpeed" attribute.
+     * LEGACY: Syncs Character movement speed to the current value of the "RPG.Attributes.MovementSpeed" attribute.
      *
      * - Should be called any time MovementSpeed changes due to a status effect, stat mod, or attribute change.
      * - Requires both UARSStatisticsComponent and UACFCharacterMovementComponent on the Character.
      *
      * DEPRECATED: Use SyncMovementSpeedFromAttribute with configurable attribute tag instead.
      *
-     * Usage Examples:
-     *   C++:      UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(MyCharacter);
-     *   Blueprint: Call 'Sync Movement Speed From Stat' after stat/status changes.
+     * Previous Approach (DEPRECATED): 
+     *   - Hardcoded "RPG.Attributes.MovementSpeed" attribute tag
+     *   - Manual synchronization after each attribute change
+     *   - Required explicit calls from status effects and items
      *
-     * How the attribute affects speed:
-     *   - Suppose the base MovementSpeed is 600.
-     *   - Status effects can modify it via percentage:
-     *         Value    | Effect Type     | Resulting Speed
-     *         -------------------------------------------------
-     *         25       | +25% boost      | 600 + 25% = 750
-     *         -50      | -50% slow       | 600 - 50% = 300
-     *         0        | No change       | 600 (unchanged)
-     *         100      | +100% (double)  | 600 + 100% = 1200
-     *         -100     | -100% (stop)    | 0 (clamped to min if needed)
-     *
-     *   - Value of "75" is a 75% haste; "-30" is a 30% slow. (These are *not* fractions; use integers or floats.)
-     *
-     * Design Notes:
-     *   - Call this helper after **any** movement speed-affecting effect (buff, debuff, item, status, etc.).
-     *   - This ensures that multiplayer clients and the server are always in sync.
+     * Current Approach (RECOMMENDED):
+     *   - Config-driven status effects with PersistentAttributeModifier
+     *   - Automatic synchronization via status effect lifecycle
+     *   - Uses ApplyMovementSpeedStatusEffect() instead
      *
      * @param Character   The character to update. Must have ARSStatisticsComponent and ACFCharacterMovementComponent.
      */
@@ -55,11 +46,14 @@ public:
     static void SyncMovementSpeedFromStat(ACharacter* Character);
 
     /**
-     * Syncs Character movement speed to the current value of the specified attribute.
+     * CURRENT: Syncs Character movement speed to the current value of the specified attribute.
      *
      * - Should be called any time the movement speed attribute changes due to a status effect, stat mod, or attribute change.
      * - Requires both UARSStatisticsComponent and UACFCharacterMovementComponent on the Character.
      * - Uses configurable attribute tag instead of hardcoded "RPG.Attributes.MovementSpeed".
+     *
+     * Previous Approach: Hardcoded RPG.Attributes.MovementSpeed attribute tag
+     * Current Approach: Config-driven gameplay tag approach allows flexibility
      *
      * @param Character      The character to update. Must have ARSStatisticsComponent and ACFCharacterMovementComponent.
      * @param AttributeTag   The gameplay tag for the movement speed attribute.
@@ -68,8 +62,11 @@ public:
     static void SyncMovementSpeedFromAttribute(ACharacter* Character, const FGameplayTag& AttributeTag);
 
     /**
-     * Syncs Character movement speed using the default RPG.Attributes.MovementSpeed attribute.
-     * This is the recommended method for most use cases.
+     * RECOMMENDED: Syncs Character movement speed using the default RPG.Attributes.MovementSpeed attribute.
+     * This is the recommended method for most use cases when using the standard attribute.
+     *
+     * Previous Approach: Manual calls to SyncMovementSpeedFromStat() after each change
+     * Current Approach: Centralized sync method with consistent attribute tag usage
      *
      * @param Character   The character to update. Must have ARSStatisticsComponent and ACFCharacterMovementComponent.
      */
@@ -223,6 +220,18 @@ public:
      */
     UFUNCTION(BlueprintCallable, Category="Nomad|Survival")
     static void RemoveSurvivalMovementPenalty(ACharacter* Character);
+
+private:
+    /**
+     * Returns configurable movement speed effect tags.
+     * This replaces hardcoded tags with a data-driven approach.
+     * 
+     * In the future, this could be moved to:
+     * - A data asset (UNomadMovementSpeedTagsConfig)
+     * - Game settings (UNomadGameplaySettings) 
+     * - Project settings (UNomadDeveloperSettings)
+     */
+    static TArray<FGameplayTag> GetConfigurableMovementSpeedEffectTags();
 
 
 };

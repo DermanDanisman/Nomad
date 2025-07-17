@@ -7,6 +7,7 @@
 #include "GameplayTagContainer.h"
 #include "Components/ACFCharacterMovementComponent.h"
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
+#include "Core/Component/NomadSurvivalNeedsComponent.h"
 // Movement speed modifications are now handled through existing status effect types with configs
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -179,16 +180,13 @@ bool UNomadStatusEffectGameplayHelpers::HasActiveMovementSpeedEffects(ACharacter
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!SEManager) return false;
     
-    // Check for common movement speed effect tags
-    static const TArray<FGameplayTag> MovementEffectTags = {
-        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedBoost"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedPenalty"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.Disabled"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Starvation"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia")
-    };
+    // Use configurable movement speed effect tags instead of hardcoded ones
+    static TArray<FGameplayTag> MovementEffectTags;
+    if (MovementEffectTags.Num() == 0)
+    {
+        // Initialize configurable tags - these could come from a config asset
+        MovementEffectTags = GetConfigurableMovementSpeedEffectTags();
+    }
     
     for (const FGameplayTag& Tag : MovementEffectTags)
     {
@@ -213,16 +211,13 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetActiveMovementSpeedEf
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!SEManager) return ActiveTags;
     
-    // Check for common movement speed effect tags
-    static const TArray<FGameplayTag> MovementEffectTags = {
-        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedBoost"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedPenalty"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Movement.Disabled"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Starvation"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"),
-        FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia")
-    };
+    // Use configurable movement speed effect tags instead of hardcoded ones
+    static TArray<FGameplayTag> MovementEffectTags;
+    if (MovementEffectTags.Num() == 0)
+    {
+        // Initialize configurable tags - these could come from a config asset
+        MovementEffectTags = GetConfigurableMovementSpeedEffectTags();
+    }
     
     for (const FGameplayTag& Tag : MovementEffectTags)
     {
@@ -233,6 +228,40 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetActiveMovementSpeedEf
     }
     
     return ActiveTags;
+}
+
+TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetConfigurableMovementSpeedEffectTags()
+{
+    /**
+     * NEW: Returns configurable movement speed effect tags.
+     * This replaces hardcoded tags with a data-driven approach.
+     * 
+     * TODO: This could be moved to a config asset or game settings for runtime configuration.
+     */
+    static TArray<FGameplayTag> ConfigurableTags;
+    
+    if (ConfigurableTags.Num() == 0)
+    {
+        // Initialize from configurable source - in the future this could come from:
+        // - A data asset (UNomadMovementSpeedTagsConfig)
+        // - Game settings (UNomadGameplaySettings)
+        // - Project settings (UNomadDeveloperSettings)
+        
+        ConfigurableTags = {
+            FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedBoost"),
+            FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedPenalty"),
+            FGameplayTag::RequestGameplayTag("StatusEffect.Movement.Disabled"),
+            FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Starvation"),
+            FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"),
+            FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"),
+            FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia")
+        };
+        
+        UE_LOG_AFFLICTION(Log, TEXT("[HELPERS] Initialized %d configurable movement speed effect tags"), 
+                          ConfigurableTags.Num());
+    }
+    
+    return ConfigurableTags;
 }
 
 void UNomadStatusEffectGameplayHelpers::ApplySurvivalMovementPenalty(

@@ -375,20 +375,21 @@ void UNomadBaseStatusEffect::RemoveJumpBlockTag(ACharacter* Character)
     }
 }
 
-void UNomadBaseStatusEffect::ApplyMovementSpeedModifier(ACharacter* Character, float Multiplier)
+void UNomadBaseStatusEffect::SyncMovementSpeedModifier(ACharacter* Character, float Multiplier)
 {
-    // Applies movement speed modifier through the status effect system.
+    // Syncs movement speed modifiers but does not apply new modifiers.
+    // Use this method after modifying movement speed attributes externally.
     // This replaces direct attribute manipulation with config-driven approach.
     
     if (!Character || !GetEffectConfig())
     {
-        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot apply movement speed modifier - invalid character or config"));
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot sync movement speed modifier - invalid character or config"));
         return;
     }
     
     // The actual movement speed modification should be handled by the status effect's config
-    // via PersistentAttributeModifier. This method serves as a hook for additional logic.
-    UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Movement speed modifier applied via config (multiplier: %f)"), Multiplier);
+    // via PersistentAttributeModifier. This method serves as a sync point for additional logic.
+    UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Movement speed modifier synced via config (multiplier: %f)"), Multiplier);
     
     // Sync movement speed after applying the status effect
     SyncMovementSpeedFromStatusEffects(Character);
