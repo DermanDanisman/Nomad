@@ -6,6 +6,8 @@
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
+#include "ARSStatisticsComponent.h"
+#include "Components/ACFCharacterMovementComponent.h"
 
 // =====================================================
 //         CONSTRUCTOR & INITIALIZATION
@@ -328,6 +330,113 @@ void UNomadBaseStatusEffect::RemoveSprintBlockTag(ACharacter* Character)
     else
     {
         UE_LOG_AFFLICTION(Warning, TEXT("[BASE] No status effect manager found for sprint unblock"));
+    }
+}
+
+void UNomadBaseStatusEffect::ApplyJumpBlockTag(ACharacter* Character)
+{
+    // Utility function to prevent jumping while this effect is active.
+    
+    if (!Character)
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot apply jump block - no character"));
+        return;
+    }
+    
+    if (UNomadStatusEffectManagerComponent* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>())
+    {
+        SEManager->AddBlockingTag(FGameplayTag::RequestGameplayTag(TEXT("Status.Block.Jump")));
+        UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Applied jump blocking tag"));
+    }
+    else
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] No status effect manager found for jump block"));
+    }
+}
+
+void UNomadBaseStatusEffect::RemoveJumpBlockTag(ACharacter* Character)
+{
+    // Utility function to remove jump blocking when effect ends.
+    
+    if (!Character)
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot remove jump block - no character"));
+        return;
+    }
+    
+    if (UNomadStatusEffectManagerComponent* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>())
+    {
+        SEManager->RemoveBlockingTag(FGameplayTag::RequestGameplayTag(TEXT("Status.Block.Jump")));
+        UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Removed jump blocking tag"));
+    }
+    else
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] No status effect manager found for jump unblock"));
+    }
+}
+
+void UNomadBaseStatusEffect::ApplyMovementSpeedModifier(ACharacter* Character, float Multiplier)
+{
+    // Applies movement speed modifier through the status effect system.
+    // This replaces direct attribute manipulation with config-driven approach.
+    
+    if (!Character || !GetEffectConfig())
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot apply movement speed modifier - invalid character or config"));
+        return;
+    }
+    
+    // The actual movement speed modification should be handled by the status effect's config
+    // via PersistentAttributeModifier. This method serves as a hook for additional logic.
+    UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Movement speed modifier applied via config (multiplier: %f)"), Multiplier);
+    
+    // Sync movement speed after applying the status effect
+    SyncMovementSpeedFromStatusEffects(Character);
+}
+
+void UNomadBaseStatusEffect::RemoveMovementSpeedModifier(ACharacter* Character)
+{
+    // Removes movement speed modifier applied by this status effect.
+    
+    if (!Character)
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot remove movement speed modifier - no character"));
+        return;
+    }
+    
+    UE_LOG_AFFLICTION(Verbose, TEXT("[BASE] Movement speed modifier removed via config"));
+    
+    // Sync movement speed after removing the status effect
+    SyncMovementSpeedFromStatusEffects(Character);
+}
+
+void UNomadBaseStatusEffect::SyncMovementSpeedFromStatusEffects(ACharacter* Character)
+{
+    // Syncs movement speed from all active status effect modifiers to ACF movement component.
+    // This replaces the hardcoded attribute tag approach with a status effect-driven approach.
+    
+    if (!Character)
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot sync movement speed - no character"));
+        return;
+    }
+    
+    const UARSStatisticsComponent* StatsComp = Character->FindComponentByClass<UARSStatisticsComponent>();
+    UACFCharacterMovementComponent* MoveComp = Character->FindComponentByClass<UACFCharacterMovementComponent>();
+    
+    if (!StatsComp || !MoveComp)
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[BASE] Cannot sync movement speed - missing components"));
+        return;
+    }
+    
+    // Get movement speed from attribute system (which includes all status effect modifiers)
+    const float NewSpeed = StatsComp->GetCurrentAttributeValue(FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed")));
+    
+    if (NewSpeed > 0.f)
+    {
+        MoveComp->MaxWalkSpeed = NewSpeed;
+        UE_LOG_AFFLICTION(VeryVerbose, TEXT("[BASE] Synced movement speed to %f"), NewSpeed);
     }
 }
 
