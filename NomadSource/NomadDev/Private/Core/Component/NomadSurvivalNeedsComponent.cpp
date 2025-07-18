@@ -8,6 +8,7 @@
 #include "Core/StatusEffect/NomadBaseStatusEffect.h"
 #include "Core/StatusEffect/Component/NomadStatusEffectManagerComponent.h"
 #include "Core/StatusEffect/SurvivalHazard/NomadSurvivalStatusEffect.h"
+#include "Core/Data/StatusEffect/NomadInfiniteEffectConfig.h"
 #include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
 
@@ -246,10 +247,13 @@ void UNomadSurvivalNeedsComponent::OnMinuteTick(const float TimeOfDay)
     const float EffectiveThirstBase = FMath::Max(0.f, 
         BaseThirstPerMinute * (1.f - CachedValues.Endurance * GetConfig()->GetEnduranceDecayPerPoint()));
     
-    // Calculate final decay values: base rate * (1 + all modifiers)
-    // Formula: FinalDecay = BaseRate * (1 + TemperatureMod + ActivityMod + OtherMods)
-    float CalculatedHungerDecay = EffectiveHungerBase * (1.f + HungerActivityMod + HungerTemperatureMod);
-    float CalculatedThirstDecay = EffectiveThirstBase * (1.f + ThirstActivityMod + ThirstTemperatureMod);
+    float TemperatureHungerMultiplier, TemperatureThirstMultiplier;
+    GetTemperatureMultipliersFromActiveEffects(TemperatureHungerMultiplier, TemperatureThirstMultiplier);
+    
+    // Calculate final decay values: base rate * (1 + all modifiers) * temperature multiplier
+    // Formula: FinalDecay = BaseRate * (1 + TemperatureMod + ActivityMod) * StatusEffectMultiplier
+    float CalculatedHungerDecay = EffectiveHungerBase * (1.f + HungerActivityMod + HungerTemperatureMod) * TemperatureHungerMultiplier;
+    float CalculatedThirstDecay = EffectiveThirstBase * (1.f + ThirstActivityMod + ThirstTemperatureMod) * TemperatureThirstMultiplier;
     
     // Apply debug multiplier for testing/balancing purposes
     // Designers can speed up/slow down decay for testing without changing base values
@@ -322,6 +326,73 @@ UNomadSurvivalNeedsComponent::FCachedStatValues UNomadSurvivalNeedsComponent::Ge
     
     // Return cached values (will be invalid if components missing)
     return Values;
+}
+
+// Add this helper function to the component
+void UNomadSurvivalNeedsComponent::GetTemperatureMultipliersFromActiveEffects(float& OutHungerMultiplier, float& OutThirstMultiplier) const
+{
+    OutHungerMultiplier = 1.0f;
+    OutThirstMultiplier = 1.0f;
+    
+    if (!StatusEffectManagerComponent || !GetConfig()) return;
+    
+    const TArray<FActiveEffect>& ActiveEffects = StatusEffectManagerComponent->GetActiveEffects();
+    
+    for (const FActiveEffect& ActiveEffect : ActiveEffects)
+    {
+        if (const UNomadSurvivalStatusEffect* SurvivalEffect = Cast<UNomadSurvivalStatusEffect>(ActiveEffect.EffectInstance))
+        {
+            ESurvivalSeverity Severity = SurvivalEffect->GetSeverityLevel();
+            
+            // Get effect tag from config
+            FGameplayTag EffectTag;
+            if (const UNomadInfiniteEffectConfig* EffectConfig = SurvivalEffect->GetEffectConfig())
+            {
+                EffectTag = EffectConfig->EffectTag;
+            }
+            
+            // Parent tag matching for more flexible tag hierarchies
+            static const FGameplayTag HypothermiaParentTag = FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia");
+            static const FGameplayTag HeatstrokeParentTag = FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke");
+            
+            if (EffectTag.MatchesTag(HypothermiaParentTag))
+            {
+                // Apply cold multiplier based on severity
+                switch (Severity)
+                {
+                    case ESurvivalSeverity::Mild:
+                        OutHungerMultiplier = FMath::Max(OutHungerMultiplier, GetConfig()->GetColdMildHungerMultiplier());
+                        break;
+                    case ESurvivalSeverity::Heavy:
+                        OutHungerMultiplier = FMath::Max(OutHungerMultiplier, GetConfig()->GetColdSevereHungerMultiplier());
+                        break;
+                    case ESurvivalSeverity::Extreme:
+                        OutHungerMultiplier = FMath::Max(OutHungerMultiplier, GetConfig()->GetColdExtremeHungerMultiplier());
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else if (EffectTag.MatchesTag(HeatstrokeParentTag))
+            {
+                // Apply heat multiplier based on severity
+                switch (Severity)
+                {
+                    case ESurvivalSeverity::Mild:
+                        OutThirstMultiplier = FMath::Max(OutThirstMultiplier, GetConfig()->GetHeatMildThirstMultiplier());
+                        break;
+                    case ESurvivalSeverity::Heavy:
+                        OutThirstMultiplier = FMath::Max(OutThirstMultiplier, GetConfig()->GetHeatSevereThirstMultiplier());
+                        break;
+                    case ESurvivalSeverity::Extreme:
+                        OutThirstMultiplier = FMath::Max(OutThirstMultiplier, GetConfig()->GetHeatExtremeThirstMultiplier());
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
 }
 
 float UNomadSurvivalNeedsComponent::ComputeNormalizedTemperature(const float InRawTemperature, const bool bIsWarmBar) const
@@ -441,6 +512,56 @@ void UNomadSurvivalNeedsComponent::ApplyDecayToStats(const float InHungerDecay, 
     // FMath::Max ensures we never apply negative decay (which would heal the player)
     StatisticsComponent->ModifyStatistic(GetConfig()->GetHungerStatTag(), -FMath::Max(0.f, InHungerDecay));
     StatisticsComponent->ModifyStatistic(GetConfig()->GetThirstStatTag(), -FMath::Max(0.f, InThirstDecay));
+}
+
+FString UNomadSurvivalNeedsComponent::GetTemperatureNotificationText(const FGameplayTag& EffectTag, const UNomadSurvivalNeedsData* Config) const
+{
+    if (!Config) return TEXT("");
+    
+    // Heatstroke notifications
+    if (EffectTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Extreme")))
+    {
+        return FString::Printf(TEXT("EXTREME HEAT - Thirst x%.0f Faster!"), Config->GetHeatExtremeThirstMultiplier());
+    }
+    else if (EffectTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Severe")))
+    {
+        return FString::Printf(TEXT("SEVERE HEAT - Thirst x%.0f Faster!"), Config->GetHeatSevereThirstMultiplier());
+    }
+    else if (EffectTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Mild")))
+    {
+        return FString::Printf(TEXT("Getting Hot - Thirst x%.0f Faster"), Config->GetHeatMildThirstMultiplier());
+    }
+    // Hypothermia notifications
+    else if (EffectTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Extreme")))
+    {
+        return FString::Printf(TEXT("EXTREME COLD - Hunger x%.0f Faster!"), Config->GetColdExtremeHungerMultiplier());
+    }
+    else if (EffectTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Severe")))
+    {
+        return FString::Printf(TEXT("SEVERE COLD - Hunger x%.0f Faster!"), Config->GetColdSevereHungerMultiplier());
+    }
+    else if (EffectTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Mild")))
+    {
+        return FString::Printf(TEXT("Getting Cold - Hunger x%.0f Faster"), Config->GetColdMildHungerMultiplier());
+    }
+    
+    return TEXT("Temperature Effect Applied");
+}
+
+FLinearColor UNomadSurvivalNeedsComponent::GetSeverityColor(ESurvivalSeverity Severity) const
+{
+    switch (Severity)
+    {
+        case ESurvivalSeverity::Mild:
+            return FLinearColor::Yellow;
+        case ESurvivalSeverity::Heavy:
+            return FLinearColor(1.0f, 0.5f, 0.0f); // Orange
+        case ESurvivalSeverity::Severe:
+        case ESurvivalSeverity::Extreme:
+            return FLinearColor::Red;
+        default:
+            return FLinearColor::White;
+    }
 }
 
 // ======== Event System Functions ========
@@ -773,10 +894,6 @@ void UNomadSurvivalNeedsComponent::EvaluateAndApplySurvivalEffects(const FCached
         return;
     }
 
-    // Remove all existing survival effects first
-    // This ensures we don't have stale effects when conditions change
-    //RemoveAllSurvivalEffects();
-
     // Evaluate each survival condition and apply appropriate effects
     EvaluateHungerEffects(CachedValues.Hunger);
     EvaluateThirstEffects(CachedValues.Thirst);  
@@ -785,175 +902,288 @@ void UNomadSurvivalNeedsComponent::EvaluateAndApplySurvivalEffects(const FCached
 
 void UNomadSurvivalNeedsComponent::EvaluateHungerEffects(float HungerLevel)
 {
+    /*
+    -----------------------------------------------------------------------------
+    EvaluateHungerEffects
+    -----------------------------------------------------------------------------
+    Purpose:
+        Evaluates current hunger level and manages appropriate status effects.
+        Handles two severity levels:
+        - MILD: Below threshold (default 50%) - status effect applies stamina/movement penalties
+        - SEVERE: At 0 hunger - status effect applies health damage over time
+        
+    Implementation:
+        Effects are infinite duration - applied once and persist until removed.
+        We track active effects to prevent re-application.
+        All penalties are configured in the status effect data assets.
+    -----------------------------------------------------------------------------
+    */
+    
     const UNomadSurvivalNeedsData* Config = GetConfig();
-    if (!Config) return;
+    if (!Config || !StatusEffectManagerComponent) return;
 
-    // Check for critical starvation (hunger at or below 0)
-    if (HungerLevel <= 0.0f)
+    // Get max hunger to calculate percentage
+    const float MaxHunger = StatisticsComponent->GetMaxValueForStatitstic(Config->GetHungerStatTag());
+    const float HungerPercent = (MaxHunger > 0.f) ? (HungerLevel / MaxHunger) : 0.f;
+
+    // Define effect tags
+    static const FGameplayTag MildTag = FGameplayTag::RequestGameplayTag("Status.Survival.Starvation.Mild");
+    static const FGameplayTag SevereTag = FGameplayTag::RequestGameplayTag("Status.Survival.Starvation.Severe");
+    
+    // Determine what effects should be active
+    const bool bShouldHaveSevere = (HungerLevel <= 0.0f);
+    const bool bShouldHaveMild = (!bShouldHaveSevere && HungerPercent < Config->GetHungerMildThreshold());
+    
+    // Check current states
+    const bool bHasMild = StatusEffectManagerComponent->HasStatusEffect(MildTag);
+    const bool bHasSevere = StatusEffectManagerComponent->HasStatusEffect(SevereTag);
+    
+    // Remove effects that shouldn't be active
+    if (bHasMild && !bShouldHaveMild)
     {
-        // Apply severe starvation effect with health damage over time
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(MildTag);
+    }
+    if (bHasSevere && !bShouldHaveSevere)
+    {
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(SevereTag);
+    }
+    
+    // Apply effects that should be active
+    if (bShouldHaveSevere && !bHasSevere)
+    {
         ApplyStatusEffect(
             Config->GetStarvationSevereEffectClass(), 
             ESurvivalSeverity::Severe,
-            Config->StarvationHealthDoTPercent  // e.g., 0.005 for 0.5% per second
+            Config->StarvationHealthDoTPercent
+        );
+        
+        BroadcastSurvivalNotification(
+            TEXT("STARVING - Taking Damage!"), 
+            FLinearColor::Red, 
+            5.0f
         );
     }
-    // Check for hunger warning threshold
-    else if (HungerLevel <= Config->GetHungerSlowThreshold())
+    else if (bShouldHaveMild && !bHasMild)
     {
-        // Apply mild starvation effect with movement/stamina penalties but no DoT
         ApplyStatusEffect(
             Config->GetStarvationMildEffectClass(),
             ESurvivalSeverity::Mild,
-            0.0f  // No damage over time for mild hunger
+            0.0f
+        );
+        
+        BroadcastSurvivalNotification(
+            TEXT("Hungry - Stamina & Movement Reduced"), 
+            FLinearColor::Yellow, 
+            4.0f
         );
     }
-    // If hunger is above thresholds, no starvation effects are applied
 }
 
 void UNomadSurvivalNeedsComponent::EvaluateThirstEffects(float ThirstLevel)
 {
     const UNomadSurvivalNeedsData* Config = GetConfig();
-    if (!Config) return;
+    if (!Config || !StatusEffectManagerComponent) return;
 
-    // Check for critical dehydration (thirst at or below 0)
+   // Get max thirst to calculate percentage
+    const float MaxThirst = StatisticsComponent->GetMaxValueForStatitstic(Config->GetThirstStatTag());
+    const float ThirstPercent = (MaxThirst > 0.f) ? (ThirstLevel / MaxThirst) : 0.f;
+
+    FGameplayTag MildTag = FGameplayTag::RequestGameplayTag("Status.Survival.Dehydration.Mild");
+    FGameplayTag SevereTag = FGameplayTag::RequestGameplayTag("Status.Survival.Dehydration.Severe");
+
+    // SEVERE: Thirst at 0 - Apply health damage over time from config
     if (ThirstLevel <= 0.0f)
     {
-        // Apply severe dehydration effect with health damage over time
-        ApplyStatusEffect(
-            Config->GetDehydrationSevereEffectClass(),
-            ESurvivalSeverity::Severe, 
-            Config->DehydrationHealthDoTPercent  // e.g., 0.01 for 1% per second
-        );
+        // Remove mild if active (transition from mild to severe)
+        if (StatusEffectManagerComponent->HasStatusEffect(MildTag))
+        {
+            StatusEffectManagerComponent->Nomad_RemoveStatusEffect(MildTag);
+        }
+        
+        // Apply severe ONLY if not already active (infinite effect - apply once!)
+        if (!StatusEffectManagerComponent->HasStatusEffect(SevereTag))
+        {
+            ApplyStatusEffect(
+                Config->GetDehydrationSevereEffectClass(),
+                ESurvivalSeverity::Severe, 
+                Config->DehydrationHealthDoTPercent
+            );
+            
+            // Broadcast for UI (Faint B&W Filter, Heavy Breathing)
+            BroadcastSurvivalNotification(
+                TEXT("DEHYDRATED - Taking Damage!"), 
+                FLinearColor::Red, 
+                5.0f
+            );
+        }
+        // Effect is already active - it will keep ticking on its own!
     }
-    // Check for thirst warning threshold
-    else if (ThirstLevel <= Config->GetThirstSlowThreshold())
+    // MILD: Thirst below 50% - Apply stamina cap reduction and movement penalty
+    else if (ThirstPercent < 0.5f)
     {
-        // Apply mild dehydration effect with movement/stamina penalties but no DoT
-        ApplyStatusEffect(
-            Config->GetDehydrationMildEffectClass(),
-            ESurvivalSeverity::Mild,
-            0.0f  // No damage over time for mild thirst
-        );
+        // Remove severe if active (recovered from 0 but still below 50%)
+        if (StatusEffectManagerComponent->HasStatusEffect(SevereTag))
+        {
+            StatusEffectManagerComponent->Nomad_RemoveStatusEffect(SevereTag);
+        }
+        
+        // Apply mild ONLY if not already active (infinite effect - apply once!)
+        if (!StatusEffectManagerComponent->HasStatusEffect(MildTag))
+        {
+            ApplyStatusEffect(
+                Config->GetDehydrationMildEffectClass(),
+                ESurvivalSeverity::Mild,
+                0.0f // No health damage at mild level
+            );
+            
+            BroadcastSurvivalNotification(
+                TEXT("Thirsty - Stamina & Movement Reduced"), 
+                FLinearColor::Blue, 
+                4.0f
+            );
+        }
+        // Effect is already active - no need to reapply!
     }
-    // If thirst is above thresholds, no dehydration effects are applied
+    else
+    {
+        // Above 50% - remove all effects (player has drunk enough)
+        if (StatusEffectManagerComponent->HasStatusEffect(MildTag))
+        {
+            StatusEffectManagerComponent->Nomad_RemoveStatusEffect(MildTag);
+        }
+        if (StatusEffectManagerComponent->HasStatusEffect(SevereTag))
+        {
+            StatusEffectManagerComponent->Nomad_RemoveStatusEffect(SevereTag);
+        }
+    }
 }
 
 void UNomadSurvivalNeedsComponent::EvaluateTemperatureEffects(float BodyTemp)
 {
     const UNomadSurvivalNeedsData* Config = GetConfig();
-    if (!Config) return;
+    if (!Config || !StatusEffectManagerComponent) return;
 
-    // ===== REMOVE ALL TEMPERATURE EFFECTS FIRST =====
-    if (StatusEffectManagerComponent)
-    {
-        // Remove all heatstroke effects before applying new one
-        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
-            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Mild"));
-        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
-            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Severe"));
-        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
-            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Extreme"));
-            
-        // Remove all hypothermia effects  
-        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
-            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Mild"));
-        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
-            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Severe"));
-        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
-            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Extreme"));
-    }
+    // Temperature effect tags hierarchy
+    static const FGameplayTag HeatstrokeParent = FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke");
+    static const FGameplayTag HypothermiaParent = FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia");
+    
+    // Determine target temperature effect
+    FGameplayTag TargetEffectTag;
+    TSubclassOf<UNomadSurvivalStatusEffect> TargetEffectClass = nullptr;
+    ESurvivalSeverity TargetSeverity = ESurvivalSeverity::None;
 
-    // ===== HEATSTROKE EVALUATION =====
-    // Check temperature against heatstroke thresholds (most severe first)
+    // HEATSTROKE EFFECTS
     if (BodyTemp >= Config->GetHeatstrokeExtremeThreshold())
     {
-        // Extreme heatstroke: maximum penalties and thirst consumption
-        ApplyStatusEffect(
-            Config->GetHeatstrokeExtremeEffectClass(),
-            ESurvivalSeverity::Extreme,
-            0.0f  // Heatstroke doesn't cause direct health damage, but increases thirst consumption
-        );
+        // EXTREME: Thirst X4 Faster (from config), %30 slow movement
+        TargetEffectTag = FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Extreme");
+        TargetEffectClass = Config->GetHeatstrokeExtremeEffectClass();
+        TargetSeverity = ESurvivalSeverity::Extreme;
     }
     else if (BodyTemp >= Config->GetHeatstrokeHeavyThreshold())
     {
-        // Heavy heatstroke: significant penalties
-        ApplyStatusEffect(
-            Config->GetHeatstrokeHeavyEffectClass(),
-            ESurvivalSeverity::Heavy,
-            0.0f
-        );
+        // HEAVY: Thirst X3 Faster (from config), %20 slow movement
+        TargetEffectTag = FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Severe");
+        TargetEffectClass = Config->GetHeatstrokeSevereEffectClass();
+        TargetSeverity = ESurvivalSeverity::Heavy;
     }
     else if (BodyTemp >= Config->GetHeatstrokeMildThreshold())
     {
-        // Mild heatstroke: minor penalties
-        ApplyStatusEffect(
-            Config->GetHeatstrokeMildEffectClass(),
-            ESurvivalSeverity::Mild,
-            0.0f
-        );
+        // MILD: Thirst X2 Faster (from config), %10 slow movement
+        TargetEffectTag = FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Mild");
+        TargetEffectClass = Config->GetHeatstrokeMildEffectClass();
+        TargetSeverity = ESurvivalSeverity::Mild;
     }
-    // ===== HYPOTHERMIA EVALUATION =====
-    // Check temperature against hypothermia thresholds (most severe first)
+    // HYPOTHERMIA EFFECTS
     else if (BodyTemp <= Config->GetHypothermiaExtremeThreshold())
     {
-        // Extreme hypothermia: maximum penalties and hunger consumption
-        ApplyStatusEffect(
-            Config->GetHypothermiaExtremeEffectClass(),
-            ESurvivalSeverity::Extreme,
-            0.0f  // Hypothermia doesn't cause direct health damage, but increases hunger consumption
-        );
+        // EXTREME: Hunger X4 Faster (from config), %30 slow movement
+        TargetEffectTag = FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Extreme");
+        TargetEffectClass = Config->GetHypothermiaExtremeEffectClass();
+        TargetSeverity = ESurvivalSeverity::Extreme;
     }
     else if (BodyTemp <= Config->GetHypothermiaHeavyThreshold())
     {
-        // Heavy hypothermia: significant penalties
-        ApplyStatusEffect(
-            Config->GetHypothermiaHeavyEffectClass(),
-            ESurvivalSeverity::Heavy,
-            0.0f
-        );
+        // HEAVY: Hunger X3 Faster (from config), %20 slow movement
+        TargetEffectTag = FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Severe");
+        TargetEffectClass = Config->GetHypothermiaSevereEffectClass();
+        TargetSeverity = ESurvivalSeverity::Heavy;
     }
     else if (BodyTemp <= Config->GetHypothermiaMildThreshold())
     {
-        // Mild hypothermia: minor penalties
-        ApplyStatusEffect(
-            Config->GetHypothermiaMildEffectClass(),
-            ESurvivalSeverity::Mild,
-            0.0f
-        );
+        // MILD: Hunger X2 Faster (from config), %10 slow movement
+        TargetEffectTag = FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Mild");
+        TargetEffectClass = Config->GetHypothermiaMildEffectClass();
     }
-    // If temperature is in the safe range, no temperature effects are applied
+
+    // Remove all temperature effects that don't match target
+    TArray<FActiveEffect> CurrentEffects = StatusEffectManagerComponent->GetActiveEffects();
+    for (const FActiveEffect& Effect : CurrentEffects)
+    {
+        if (Effect.Tag.MatchesTag(HeatstrokeParent) || Effect.Tag.MatchesTag(HypothermiaParent))
+        {
+            if (Effect.Tag != TargetEffectTag)
+            {
+                StatusEffectManagerComponent->Nomad_RemoveStatusEffect(Effect.Tag);
+            }
+        }
+    }
+    
+    // Apply target effect if not already active
+    if (TargetEffectTag.IsValid() && TargetEffectClass)
+    {
+        if (!StatusEffectManagerComponent->HasStatusEffect(TargetEffectTag))
+        {
+            ApplyStatusEffect(TargetEffectClass, TargetSeverity, 0.0f);
+            
+            // Notification based on severity
+            FString NotificationText = GetTemperatureNotificationText(TargetEffectTag, Config);
+            FLinearColor NotifColor = GetSeverityColor(TargetSeverity);
+            BroadcastSurvivalNotification(NotificationText, NotifColor, 5.0f);
+        }
+    }
 }
 
 void UNomadSurvivalNeedsComponent::ApplyStatusEffect(TSubclassOf<UNomadSurvivalStatusEffect> EffectClass, ESurvivalSeverity Severity, float DoTPercent)
 {
-    // Validate inputs
     if (!EffectClass || !StatusEffectManagerComponent)
     {
         UE_LOG_SURVIVAL(Warning, TEXT("Cannot apply survival effect - invalid class or manager"));
         return;
     }
 
-    // Apply the status effect using the ACF status effect system
-    // The effect will automatically handle attribute modifiers based on its config
-    UNomadSurvivalStatusEffect* AppliedEffect = Cast<UNomadSurvivalStatusEffect>(
-        StatusEffectManagerComponent->ApplyHazardDoTEffectWithPercent(EffectClass, DoTPercent)
-    );
-
-    if (AppliedEffect)
+    // For survival effects with DoT
+    if (DoTPercent > 0.0f)
     {
-        // Configure the effect with severity and DoT settings
-        AppliedEffect->SetSeverityLevel(Severity);
-        AppliedEffect->SetDoTPercent(DoTPercent);
-
-        // Log successful application
-        UE_LOG_SURVIVAL(Log, TEXT("Applied survival effect %s with severity %s"), 
-               *EffectClass->GetName(),
-               *StaticEnum<ESurvivalSeverity>()->GetNameStringByValue((int64)Severity));
+        UNomadSurvivalStatusEffect* AppliedEffect = 
+            StatusEffectManagerComponent->ApplyHazardDoTEffectWithPercent(EffectClass, DoTPercent);
+        
+        if (AppliedEffect)
+        {
+            AppliedEffect->SetSeverityLevel(Severity);
+        }
     }
     else
     {
-        UE_LOG_SURVIVAL(Error, TEXT("Failed to apply survival effect %s"), *EffectClass->GetName());
+        // For effects without DoT (mild effects)
+        StatusEffectManagerComponent->ApplyInfiniteStatusEffect(EffectClass);
+        
+        // Find and set severity
+        const UNomadSurvivalStatusEffect* CDO = EffectClass.GetDefaultObject();
+        if (CDO)
+        {
+            FGameplayTag EffectTag = CDO->GetEffectiveTag();
+            const int32 Index = StatusEffectManagerComponent->FindActiveEffectIndexByTag(EffectTag);
+            if (Index != INDEX_NONE)
+            {
+                const TArray<FActiveEffect>& ActiveEffects = StatusEffectManagerComponent->GetActiveEffects();
+                if (UNomadSurvivalStatusEffect* ActiveEffect = 
+                    Cast<UNomadSurvivalStatusEffect>(ActiveEffects[Index].EffectInstance))
+                {
+                    ActiveEffect->SetSeverityLevel(Severity);
+                }
+            }
+        }
     }
 }
 
@@ -963,10 +1193,11 @@ void UNomadSurvivalNeedsComponent::RemoveAllSurvivalEffects()
 
     // Remove all survival-related status effects by their gameplay tags
     // This ensures clean state transitions when conditions change
-    // ===== REMOVE ALL TEMPERATURE EFFECTS FIRST =====
+    
+    // Remove all temperature effects
     if (StatusEffectManagerComponent)
     {
-        // Remove all heatstroke effects before applying new one
+        // Remove all heatstroke effects
         StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
             FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Mild"));
         StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
@@ -981,6 +1212,18 @@ void UNomadSurvivalNeedsComponent::RemoveAllSurvivalEffects()
             FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Severe"));
         StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
             FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Extreme"));
+            
+        // Remove all starvation effects
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Starvation.Mild"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Starvation.Severe"));
+            
+        // Remove all dehydration effects
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Dehydration.Mild"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Dehydration.Severe"));
     }
     
     // Ensure movement speed is properly synced after removing all survival effects

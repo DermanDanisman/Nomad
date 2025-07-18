@@ -431,7 +431,7 @@ private:
      */
     UPROPERTY(EditDefaultsOnly, Category="Survival|Data")
     TObjectPtr<UNomadSurvivalNeedsData> SurvivalConfig;
-
+    
     /** Base hunger lost per minute at rest, after config is loaded. */
     float BaseHungerPerMinute = 0.f;
 
@@ -520,6 +520,7 @@ private:
 
     /** Updates and returns cached stat values to avoid redundant component calls */
     FCachedStatValues GetCachedStatValues() const;
+    void GetTemperatureMultipliersFromActiveEffects(float& OutHungerMultiplier, float& OutThirstMultiplier) const;
 
     // ======== Core Simulation Helpers ========
     
@@ -567,6 +568,21 @@ private:
      * @param ThirstDecay   Value to subtract from thirst stat.
      */
     void ApplyDecayToStats(float HungerDecay, float ThirstDecay) const;
+    
+    /**
+     * Gets appropriate notification text for temperature effects based on tag and config
+     * @param EffectTag The gameplay tag of the temperature effect
+     * @param Config The survival needs configuration
+     * @return Formatted notification text with multiplier values
+     */
+    FString GetTemperatureNotificationText(const FGameplayTag& EffectTag, const UNomadSurvivalNeedsData* Config) const;
+    
+    /**
+     * Gets the appropriate color for UI notifications based on severity
+     * @param Severity The severity level of the effect
+     * @return Color for UI display (Yellow for mild, Orange for heavy, Red for severe/extreme)
+     */
+    FLinearColor GetSeverityColor(ESurvivalSeverity Severity) const;
 
     // ======== Event System (State Transitions & Warnings) ========
 

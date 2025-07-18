@@ -527,6 +527,18 @@ public:
     FGameplayTag HypothermiaDebuffTag;
 
     // =========================
+    // [Hunger/Thirst Effect Thresholds]
+    // =========================
+
+    /** Hunger percentage threshold for mild effects (status effect handles penalties) */
+    UPROPERTY(EditAnywhere, Category="Survival Effects|Thresholds", meta=(ClampMin="0.0", ClampMax="1.0"))
+    float HungerMildThreshold = 0.5f; // 50%
+
+    /** Thirst percentage threshold for mild effects (status effect handles penalties) */
+    UPROPERTY(EditAnywhere, Category="Survival Effects|Thresholds", meta=(ClampMin="0.0", ClampMax="1.0"))
+    float ThirstMildThreshold = 0.5f; // 50%
+
+    // =========================
     // [NEW: Survival Status Effect Classes - Data-Driven System]
     // =========================
 
@@ -569,6 +581,34 @@ public:
     /** NEW: Extreme hypothermia effect */
     UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
     TSubclassOf<UNomadSurvivalStatusEffect> HypothermiaExtremeEffectClass;
+
+    // =========================
+    // [Temperature Effect Multipliers]
+    // =========================
+
+    /** Hunger decay multiplier for mild cold (Hypothermia Mild) */
+    UPROPERTY(EditAnywhere, Category="Temperature Effects|Cold", meta=(ClampMin="1.0"))
+    float ColdMildHungerMultiplier = 2.0f;
+
+    /** Hunger decay multiplier for severe cold (Hypothermia Heavy) */
+    UPROPERTY(EditAnywhere, Category="Temperature Effects|Cold", meta=(ClampMin="1.0"))
+    float ColdSevereHungerMultiplier = 3.0f;
+
+    /** Hunger decay multiplier for extreme cold (Hypothermia Extreme) */
+    UPROPERTY(EditAnywhere, Category="Temperature Effects|Cold", meta=(ClampMin="1.0"))
+    float ColdExtremeHungerMultiplier = 4.0f;
+
+    /** Thirst decay multiplier for mild heat (Heatstroke Mild) */
+    UPROPERTY(EditAnywhere, Category="Temperature Effects|Heat", meta=(ClampMin="1.0"))
+    float HeatMildThirstMultiplier = 2.0f;
+
+    /** Thirst decay multiplier for severe heat (Heatstroke Heavy) */
+    UPROPERTY(EditAnywhere, Category="Temperature Effects|Heat", meta=(ClampMin="1.0"))
+    float HeatSevereThirstMultiplier = 3.0f;
+
+    /** Thirst decay multiplier for extreme heat (Heatstroke Extreme) */
+    UPROPERTY(EditAnywhere, Category="Temperature Effects|Heat", meta=(ClampMin="1.0"))
+    float HeatExtremeThirstMultiplier = 4.0f;
 
     /**
      * Advanced, non-linear tuning for all survival modifiers.
@@ -660,6 +700,9 @@ public:
     // =========================
     // [NEW: Status Effect Class Getters]
     // =========================
+
+    UFUNCTION(BlueprintPure, Category="Survival Effects") float GetHungerMildThreshold() const { return HungerMildThreshold; }
+    UFUNCTION(BlueprintPure, Category="Survival Effects") float GetThirstMildThreshold() const { return ThirstMildThreshold; }
     
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetStarvationMildEffectClass() const { return StarvationMildEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetStarvationSevereEffectClass() const { return StarvationSevereEffectClass; }
@@ -667,10 +710,17 @@ public:
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetDehydrationSevereEffectClass() const { return DehydrationSevereEffectClass; }
     
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeMildEffectClass() const { return HeatstrokeMildEffectClass; }
-    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeHeavyEffectClass() const { return HeatstrokeSevereEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeSevereEffectClass() const { return HeatstrokeSevereEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeExtremeEffectClass() const { return HeatstrokeExtremeEffectClass; }
     
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaMildEffectClass() const { return HypothermiaMildEffectClass; }
-    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaHeavyEffectClass() const { return HypothermiaSevereEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaSevereEffectClass() const { return HypothermiaSevereEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaExtremeEffectClass() const { return HypothermiaExtremeEffectClass; }
+    
+    UFUNCTION(BlueprintPure, Category="Temperature Effects") float GetColdMildHungerMultiplier() const { return ColdMildHungerMultiplier; }
+    UFUNCTION(BlueprintPure, Category="Temperature Effects") float GetColdSevereHungerMultiplier() const { return ColdSevereHungerMultiplier; }
+    UFUNCTION(BlueprintPure, Category="Temperature Effects") float GetColdExtremeHungerMultiplier() const { return ColdExtremeHungerMultiplier; }
+    UFUNCTION(BlueprintPure, Category="Temperature Effects") float GetHeatMildThirstMultiplier() const { return HeatMildThirstMultiplier; }
+    UFUNCTION(BlueprintPure, Category="Temperature Effects") float GetHeatSevereThirstMultiplier() const { return HeatSevereThirstMultiplier; }
+    UFUNCTION(BlueprintPure, Category="Temperature Effects") float GetHeatExtremeThirstMultiplier() const { return HeatExtremeThirstMultiplier; }
 };
