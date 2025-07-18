@@ -21,29 +21,7 @@ class NOMADDEV_API UNomadStatusEffectGameplayHelpers : public UBlueprintFunction
 	GENERATED_BODY()
 public:
 
-    /**
-     * LEGACY: Syncs Character movement speed to the current value of the "RPG.Attributes.MovementSpeed" attribute.
-     *
-     * - Should be called any time MovementSpeed changes due to a status effect, stat mod, or attribute change.
-     * - Requires both UARSStatisticsComponent and UACFCharacterMovementComponent on the Character.
-     *
-     * DEPRECATED: Use SyncMovementSpeedFromAttribute with configurable attribute tag instead.
-     *
-     * Previous Approach (DEPRECATED): 
-     *   - Hardcoded "RPG.Attributes.MovementSpeed" attribute tag
-     *   - Manual synchronization after each attribute change
-     *   - Required explicit calls from status effects and items
-     *
-     * Current Approach (RECOMMENDED):
-     *   - Config-driven status effects with PersistentAttributeModifier
-     *   - Automatic synchronization via status effect lifecycle
-     *   - Uses ApplyMovementSpeedStatusEffect() instead
-     *
-     * @param Character   The character to update. Must have ARSStatisticsComponent and ACFCharacterMovementComponent.
-     */
-    UFUNCTION(BlueprintCallable, Category="Nomad | Status Effect Gameplay Helpers | Movement", 
-        meta=(DeprecatedFunction, DeprecationMessage="Use SyncMovementSpeedFromAttribute instead"))
-    static void SyncMovementSpeedFromStat(ACharacter* Character);
+
 
     /**
      * CURRENT: Syncs Character movement speed to the current value of the specified attribute.
@@ -51,9 +29,6 @@ public:
      * - Should be called any time the movement speed attribute changes due to a status effect, stat mod, or attribute change.
      * - Requires both UARSStatisticsComponent and UACFCharacterMovementComponent on the Character.
      * - Uses configurable attribute tag instead of hardcoded "RPG.Attributes.MovementSpeed".
-     *
-     * Previous Approach: Hardcoded RPG.Attributes.MovementSpeed attribute tag
-     * Current Approach: Config-driven gameplay tag approach allows flexibility
      *
      * @param Character      The character to update. Must have ARSStatisticsComponent and ACFCharacterMovementComponent.
      * @param AttributeTag   The gameplay tag for the movement speed attribute.
@@ -64,9 +39,6 @@ public:
     /**
      * RECOMMENDED: Syncs Character movement speed using the default RPG.Attributes.MovementSpeed attribute.
      * This is the recommended method for most use cases when using the standard attribute.
-     *
-     * Previous Approach: Manual calls to SyncMovementSpeedFromStat() after each change
-     * Current Approach: Centralized sync method with consistent attribute tag usage
      *
      * @param Character   The character to update. Must have ARSStatisticsComponent and ACFCharacterMovementComponent.
      */
@@ -113,41 +85,9 @@ public:
     UFUNCTION(BlueprintPure, Category="Nomad|Movement")
     static bool IsActionBlocked(ACharacter* Character, const FGameplayTag& BlockingTag);
 
-    /**
-     * Apply a movement speed multiplier through the status effect system instead of direct manipulation.
-     * 
-     * DEPRECATED: Use status effects with PersistentAttributeModifier configuration instead.
-     * 
-     * Example: To slow walk/jog by 20%, call with Multiplier = 0.8.
-     * 
-     * @param MoveComp The movement component to modify.
-     * @param State The locomotion state to affect (EWalk, EJog, ESprint, etc).
-     * @param Multiplier The multiplier to apply (0.8 = 20% slow, 1.0 = no change).
-     * @param Guid A unique identifier for this modifier (so you can remove it later).
-     */
-    UFUNCTION(BlueprintCallable, Category="Nomad|Movement", 
-        meta=(DeprecatedFunction, DeprecationMessage="Use status effects with PersistentAttributeModifier configuration instead"))
-    static void ApplyMovementSpeedModifierToState(
-        UACFCharacterMovementComponent* MoveComp,
-        ELocomotionState State,
-        float Multiplier,
-        const FGuid& Guid);
 
-    /**
-     * Remove a movement speed modifier from a specific locomotion state (by Guid).
-     * 
-     * DEPRECATED: Use status effects with PersistentAttributeModifier configuration instead.
-     * 
-     * @param MoveComp The movement component to modify.
-     * @param State The locomotion state to affect.
-     * @param Guid The unique identifier used when you added the modifier.
-     */
-    UFUNCTION(BlueprintCallable, Category="Nomad|Movement", 
-        meta=(DeprecatedFunction, DeprecationMessage="Use status effects with PersistentAttributeModifier configuration instead"))
-    static void RemoveMovementSpeedModifierFromState(
-        UACFCharacterMovementComponent* MoveComp,
-        ELocomotionState State,
-        const FGuid& Guid);
+
+
 
     /**
      * Apply a movement speed effect through the status effect system.
