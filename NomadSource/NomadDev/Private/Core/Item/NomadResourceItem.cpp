@@ -83,35 +83,35 @@ void ANomadResourceItem::InitializeItem()
 UTexture2D* ANomadResourceItem::GetThumbnailImage() const
 {
     // Return the thumbnail image from the item information.
-    return CraftingMaterialData->CraftingMaterialInfo.ItemInfo.ThumbNail;
+    return CraftingMaterialData ? CraftingMaterialData->CraftingMaterialInfo.ItemInfo.ThumbNail : nullptr;
 }
 
 FText ANomadResourceItem::GetItemName() const
 {
     // Return the item name as defined in the data asset.
-    return CraftingMaterialData->CraftingMaterialInfo.ItemInfo.Name;
+    return CraftingMaterialData ? CraftingMaterialData->CraftingMaterialInfo.ItemInfo.Name : FText::GetEmpty();
 }
 
 FText ANomadResourceItem::GetItemDescription() const
 {
     // Return the item description as defined in the data asset.
-    return CraftingMaterialData->CraftingMaterialInfo.ItemInfo.Description;
+    return CraftingMaterialData ? CraftingMaterialData->CraftingMaterialInfo.ItemInfo.Description : FText::GetEmpty();
 }
 
 EItemType ANomadResourceItem::GetItemType() const
 {
     // Return the item type (e.g., crafting material) as defined in the data asset.
-    return CraftingMaterialData->CraftingMaterialInfo.ItemInfo.ItemType;
+    return CraftingMaterialData ? CraftingMaterialData->CraftingMaterialInfo.ItemInfo.ItemType : EItemType::Default;
 }
 
 FItemDescriptor ANomadResourceItem::GetItemInfo() const
 {
     // Return the complete item descriptor from the data asset.
-    return CraftingMaterialData->CraftingMaterialInfo.ItemInfo;
+    return CraftingMaterialData ? CraftingMaterialData->CraftingMaterialInfo.ItemInfo : FItemDescriptor();
 }
 
 TArray<FGameplayTag> ANomadResourceItem::GetPossibleItemSlots() const
 {
     // Return the list of valid item slots for this item, as defined in the data asset.
-    return CraftingMaterialData->CraftingMaterialInfo.ItemInfo.GetPossibleItemSlots();
+    return CraftingMaterialData ? CraftingMaterialData->CraftingMaterialInfo.ItemInfo.GetPossibleItemSlots() : TArray<FGameplayTag>();
 }
