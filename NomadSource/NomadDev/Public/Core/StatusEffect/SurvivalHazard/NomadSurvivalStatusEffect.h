@@ -129,7 +129,7 @@ public:
     {
         // Set gameplay tag for this specific survival effect
         // This tag is used by the status effect manager for identification and removal
-        SetStatusEffectTag(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Starvation"));
+        SetStatusEffectTag(FGameplayTag::RequestGameplayTag("Status.Survival.Starvation"));
     }
 
 protected:
@@ -172,7 +172,7 @@ public:
     UNomadDehydrationStatusEffect()
     {
         // Set gameplay tag for this specific survival effect
-        SetStatusEffectTag(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"));
+        SetStatusEffectTag(FGameplayTag::RequestGameplayTag("Status.Survival.Dehydration"));
     }
 
 protected:
@@ -214,7 +214,7 @@ public:
     UNomadHeatstrokeStatusEffect()
     {
         // Set gameplay tag for this specific survival effect
-        SetStatusEffectTag(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"));
+        SetStatusEffectTag(FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke"));
     }
 
 protected:
@@ -256,7 +256,7 @@ public:
     UNomadHypothermiaStatusEffect()
     {
         // Set gameplay tag for this specific survival effect
-        SetStatusEffectTag(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia"));
+        SetStatusEffectTag(FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia"));
     }
 
 protected:

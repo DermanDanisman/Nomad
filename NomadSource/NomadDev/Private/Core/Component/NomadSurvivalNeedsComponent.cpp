@@ -775,7 +775,7 @@ void UNomadSurvivalNeedsComponent::EvaluateAndApplySurvivalEffects(const FCached
 
     // Remove all existing survival effects first
     // This ensures we don't have stale effects when conditions change
-    RemoveAllSurvivalEffects();
+    //RemoveAllSurvivalEffects();
 
     // Evaluate each survival condition and apply appropriate effects
     EvaluateHungerEffects(CachedValues.Hunger);
@@ -843,6 +843,26 @@ void UNomadSurvivalNeedsComponent::EvaluateTemperatureEffects(float BodyTemp)
 {
     const UNomadSurvivalNeedsData* Config = GetConfig();
     if (!Config) return;
+
+    // ===== REMOVE ALL TEMPERATURE EFFECTS FIRST =====
+    if (StatusEffectManagerComponent)
+    {
+        // Remove all heatstroke effects before applying new one
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Mild"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Severe"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Extreme"));
+            
+        // Remove all hypothermia effects  
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Mild"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Severe"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Extreme"));
+    }
 
     // ===== HEATSTROKE EVALUATION =====
     // Check temperature against heatstroke thresholds (most severe first)
@@ -943,10 +963,25 @@ void UNomadSurvivalNeedsComponent::RemoveAllSurvivalEffects()
 
     // Remove all survival-related status effects by their gameplay tags
     // This ensures clean state transitions when conditions change
-    StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Starvation"));
-    StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"));
-    StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"));
-    StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia"));
+    // ===== REMOVE ALL TEMPERATURE EFFECTS FIRST =====
+    if (StatusEffectManagerComponent)
+    {
+        // Remove all heatstroke effects before applying new one
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Mild"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Severe"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Heatstroke.Extreme"));
+            
+        // Remove all hypothermia effects  
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Mild"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Severe"));
+        StatusEffectManagerComponent->Nomad_RemoveStatusEffect(
+            FGameplayTag::RequestGameplayTag("Status.Survival.Hypothermia.Extreme"));
+    }
     
     // Ensure movement speed is properly synced after removing all survival effects
     // This ensures any lingering movement modifiers are cleaned up

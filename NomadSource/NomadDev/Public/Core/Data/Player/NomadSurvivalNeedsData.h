@@ -330,7 +330,7 @@ public:
      * Heatstroke Heavy threshold (°C): Body temp at/above this value triggers heavy heatstroke slow.
      */
     UPROPERTY(EditAnywhere, Category="Hazards|Heatstroke")
-    float HeatstrokeHeavyThreshold = 39.0f;
+    float HeatstrokeSevereThreshold = 39.0f;
 
     /**
      * Heatstroke Extreme threshold (°C): Body temp at/above this value triggers extreme heatstroke slow.
@@ -348,7 +348,7 @@ public:
      * Hypothermia Heavy threshold (°C): Body temp at/below this value triggers heavy hypothermia slow.
      */
     UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia")
-    float HypothermiaHeavyThreshold = 34.0f;
+    float HypothermiaSevereThreshold = 34.0f;
 
     /**
      * Hypothermia Extreme threshold (°C): Body temp at/below this value triggers extreme hypothermia slow.
@@ -552,7 +552,7 @@ public:
 
     /** NEW: Heavy heatstroke effect */
     UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
-    TSubclassOf<UNomadSurvivalStatusEffect> HeatstrokeHeavyEffectClass;
+    TSubclassOf<UNomadSurvivalStatusEffect> HeatstrokeSevereEffectClass;
 
     /** NEW: Extreme heatstroke effect */
     UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
@@ -564,7 +564,7 @@ public:
 
     /** NEW: Heavy hypothermia effect */
     UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
-    TSubclassOf<UNomadSurvivalStatusEffect> HypothermiaHeavyEffectClass;
+    TSubclassOf<UNomadSurvivalStatusEffect> HypothermiaSevereEffectClass;
 
     /** NEW: Extreme hypothermia effect */
     UPROPERTY(EditAnywhere, Category="Survival Status Effects|Temperature")
@@ -619,11 +619,11 @@ public:
 
     // --- Temperature Hazard Movement Slow Getters ---
     UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeMildThreshold() const { return HeatstrokeMildThreshold; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeHeavyThreshold() const { return HeatstrokeHeavyThreshold; }
+    UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeHeavyThreshold() const { return HeatstrokeSevereThreshold; }
     UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeExtremeThreshold() const { return HeatstrokeExtremeThreshold; }
 
     UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaMildThreshold() const { return HypothermiaMildThreshold; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaHeavyThreshold() const { return HypothermiaHeavyThreshold; }
+    UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaHeavyThreshold() const { return HypothermiaSevereThreshold; }
     UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaExtremeThreshold() const { return HypothermiaExtremeThreshold; }
 
     UFUNCTION(BlueprintPure, Category="SideEffects|Thresholds") float GetHungerSlowThreshold() const { return HungerSlowThreshold; }
@@ -667,10 +667,10 @@ public:
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetDehydrationSevereEffectClass() const { return DehydrationSevereEffectClass; }
     
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeMildEffectClass() const { return HeatstrokeMildEffectClass; }
-    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeHeavyEffectClass() const { return HeatstrokeHeavyEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeHeavyEffectClass() const { return HeatstrokeSevereEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeExtremeEffectClass() const { return HeatstrokeExtremeEffectClass; }
     
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaMildEffectClass() const { return HypothermiaMildEffectClass; }
-    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaHeavyEffectClass() const { return HypothermiaHeavyEffectClass; }
+    UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaHeavyEffectClass() const { return HypothermiaSevereEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaExtremeEffectClass() const { return HypothermiaExtremeEffectClass; }
 };
