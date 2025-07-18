@@ -109,6 +109,23 @@ Recent Updates: Consolidated status effect system, renamed confusing functions,
     - ADDED: EvaluateAndApplySurvivalEffects (new main entry point for survival status effects)
     - CLEAR: Each function has single responsibility - simulation, events, or status effects
 
+16. System Architecture After Cleanup (2025-07-17):
+    Survival System Architecture:
+    ├── NEW System (Data-Driven)
+    │   ├── EvaluateAndApplySurvivalEffects()
+    │   ├── EvaluateHungerEffects()
+    │   ├── EvaluateThirstEffects()
+    │   ├── EvaluateTemperatureEffects()
+    │   └── Uses: UNomadSurvivalStatusEffect + Config Assets
+    ├── LEGACY System (Compatibility)
+    │   ├── UpdateBodyTemperature()
+    │   ├── EvaluateSurvivalStateTransitions()
+    │   └── Uses: UNomadBaseStatusEffect + Fixed Thresholds
+    └── Core Systems (Shared)
+        ├── OnMinuteTick() - Main entry point
+        ├── Warning System - MaybeFireXXXWarning()
+        └── Stat Decay - ApplyDecayToStats()
+
 ===============================================================================
 */
 
