@@ -52,7 +52,7 @@ protected:
 
     // Called when the actor begins play in the game world
     virtual void BeginPlay() override;
-    
+
     /** Root component for attaching mesh and effects to this actor */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gatherable")
     TObjectPtr<USceneComponent> DefaultSceneRoot;
@@ -93,7 +93,7 @@ protected:
     /** The current health of the resource; it gets decremented each time it is gathered */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gatherable")
     int32 CurrentHealth;
-    
+
     /**
      * Entry point for a gather action (e.g., player hits the resource with a tool or action).
      * This function is called locally and forwards the request to the server if needed.
@@ -130,7 +130,7 @@ protected:
     void ResetGatherableState();
 
     /**
-     * This is the implementation for interaction with a pawn (e.g., the player). 
+     * This is the implementation for interaction with a pawn (e.g., the player).
      * It’s part of the `IACFInteractableInterface` which allows the pawn to interact with this actor.
      */
     virtual void OnInteractedByPawn_Implementation(class APawn* Pawn, const FString& interactionType = "") override;

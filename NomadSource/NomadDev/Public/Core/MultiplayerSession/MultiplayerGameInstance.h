@@ -8,7 +8,7 @@
 #include "MultiplayerGameInstance.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API UMultiplayerGameInstance : public UGameInstance {

@@ -30,7 +30,7 @@ AACFWorldItem* UNomadItemSystemFunctionLibrary::SpawnResourceWorldItemNearLocati
         /*Instigator=*/ nullptr,
         SpawnParams.SpawnCollisionHandlingOverride
         );
-    
+
     if (!NomadWorldItem)
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to spawn NomadWorldItem!"));
@@ -65,7 +65,7 @@ AACFWorldItem* UNomadItemSystemFunctionLibrary::SpawnResourceWorldItemNearLocati
     return NomadWorldItem;
 }
 
-FHitResult UNomadItemSystemFunctionLibrary::PerformLineTraceFromCameraManager(UObject* WorldContextObject, 
+FHitResult UNomadItemSystemFunctionLibrary::PerformLineTraceFromCameraManager(UObject* WorldContextObject,
     APlayerController* PlayerController, const float TraceLength, bool bShowDebug)
 {
     const UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
@@ -74,49 +74,49 @@ FHitResult UNomadItemSystemFunctionLibrary::PerformLineTraceFromCameraManager(UO
         UE_LOG(LogTemp, Error, TEXT("Invalid WorldContextObject or CameraComponent!"));
         return FHitResult();
     }
-    
+
     const FVector CameraLocation = PlayerController->PlayerCameraManager->GetCameraLocation();
     const FRotator CameraRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
     const FVector CameraForward = CameraRotation.Vector();
-    
+
     const FVector TraceStart = CameraLocation;
     const FVector TraceEnd = CameraLocation + CameraForward * TraceLength;
 
     FCollisionQueryParams CollisionParams;
     CollisionParams.AddIgnoredActor(PlayerController->GetPawn());
-    
+
     // Test both channels and find the closest hit
     FHitResult InteractableHit;
     FHitResult GatherableHit;
-    
+
     bool bInteractableHit = World->LineTraceSingleByChannel(
         InteractableHit, TraceStart, TraceEnd, ECC_Interactable, CollisionParams);
-    
+
     bool bGatherableHit = World->LineTraceSingleByChannel(
         GatherableHit, TraceStart, TraceEnd, ECC_Gatherable, CollisionParams);
-    
+
     // Determine which hit is closer (if any)
     FHitResult FinalHit;
     bool bAnyHit = false;
-    
+
     if (bInteractableHit && bGatherableHit)
     {
         // Both hit something, choose the closer one
         float InteractableDistance = FVector::Dist(TraceStart, InteractableHit.Location);
         float GatherableDistance = FVector::Dist(TraceStart, GatherableHit.Location);
-        
+
         if (InteractableDistance <= GatherableDistance)
         {
             FinalHit = InteractableHit;
             bAnyHit = true;
-            UE_LOG(LogTemp, Log, TEXT("Hit Interactable: %s"), 
+            UE_LOG(LogTemp, Log, TEXT("Hit Interactable: %s"),
                 FinalHit.GetActor() ? *FinalHit.GetActor()->GetName() : TEXT("None"));
         }
         else
         {
             FinalHit = GatherableHit;
             bAnyHit = true;
-            UE_LOG(LogTemp, Log, TEXT("Hit Gatherable: %s"), 
+            UE_LOG(LogTemp, Log, TEXT("Hit Gatherable: %s"),
                 FinalHit.GetActor() ? *FinalHit.GetActor()->GetName() : TEXT("None"));
         }
     }
@@ -124,14 +124,14 @@ FHitResult UNomadItemSystemFunctionLibrary::PerformLineTraceFromCameraManager(UO
     {
         FinalHit = InteractableHit;
         bAnyHit = true;
-        UE_LOG(LogTemp, Log, TEXT("Hit Interactable: %s"), 
+        UE_LOG(LogTemp, Log, TEXT("Hit Interactable: %s"),
             FinalHit.GetActor() ? *FinalHit.GetActor()->GetName() : TEXT("None"));
     }
     else if (bGatherableHit)
     {
         FinalHit = GatherableHit;
         bAnyHit = true;
-        UE_LOG(LogTemp, Log, TEXT("Hit Gatherable: %s"), 
+        UE_LOG(LogTemp, Log, TEXT("Hit Gatherable: %s"),
             FinalHit.GetActor() ? *FinalHit.GetActor()->GetName() : TEXT("None"));
     }
 
@@ -139,7 +139,7 @@ FHitResult UNomadItemSystemFunctionLibrary::PerformLineTraceFromCameraManager(UO
     {
         FColor LineColor = bAnyHit ? FColor::Green : FColor::Red;
         DrawDebugLine(World, TraceStart, TraceEnd, LineColor, false, 1.0f, 0, 2.0f);
-        
+
         if (bAnyHit)
         {
             // Color code based on type
@@ -152,7 +152,7 @@ FHitResult UNomadItemSystemFunctionLibrary::PerformLineTraceFromCameraManager(UO
             {
                 HitColor = FColor::Orange; // Orange for Gatherable
             }
-            
+
             DrawDebugSphere(World, FinalHit.Location, 5.0f, 12, HitColor, false, 1.0f);
         }
     }

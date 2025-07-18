@@ -1,9 +1,9 @@
 // -----------------------------------------------------------------------------
 // UCommonMultiplayerLobbyPassword.h
 //
-// This widget represents the UI used to join a lobby session when a password 
-// is required. It interacts with the MultiplayerSessionsSubsystem to join a 
-// session, and displays error messages (via a Blueprint event) if the provided 
+// This widget represents the UI used to join a lobby session when a password
+// is required. It interacts with the MultiplayerSessionsSubsystem to join a
+// session, and displays error messages (via a Blueprint event) if the provided
 // password is incorrect.
 // -----------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ public:
 protected:
     // -------------------------------------------------------------------------
     // Widget Lifecycle:
-    // Initialize is called once when the widget is created; NativeDestruct is called 
+    // Initialize is called once when the widget is created; NativeDestruct is called
     // before the widget is destroyed.
     // -------------------------------------------------------------------------
     virtual bool Initialize() override;

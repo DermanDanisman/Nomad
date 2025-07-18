@@ -12,33 +12,33 @@ UNomadInstantEffectConfig::UNomadInstantEffectConfig()
 {
     // Instant effects have shorter notification duration by default
     NotificationDuration = 2.0f;
-    
+
     // Initialize instant effect settings
     bTriggerScreenEffects = false;
     bBypassCooldowns = false;
-    
+
     // Initialize stat modifications
     OnApplyStatModifications.Empty();
     TemporaryAttributeModifier = FAttributesSetModifier();
-    
+
     // Initialize chain effects
     bTriggerChainEffects = false;
     ChainEffects.Empty();
     ChainEffectDelay = 0.0f;
-    
+
     // Initialize feedback settings
     bShowFloatingText = true;
     bInterruptsOtherEffects = false;
     InterruptTags = FGameplayTagContainer();
-    
+
     // Instant effects typically don't stack
     bCanStack = false;
     MaxStackSize = 1;
-    
+
     // Hybrid system defaults
     ApplicationMode = EStatusEffectApplicationMode::StatModification;
     DamageTypeClass = nullptr;
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[CONFIG] Instant effect config constructed"));
 }
 
@@ -86,7 +86,7 @@ bool UNomadInstantEffectConfig::IsConfigValid() const
 TArray<FString> UNomadInstantEffectConfig::GetValidationErrors() const
 {
     TArray<FString> Errors;
-    
+
     // Get base validation errors
     Errors.Append(Super::GetValidationErrors());
 
@@ -132,12 +132,12 @@ float UNomadInstantEffectConfig::GetEffectMagnitude() const
 {
     // Calculate total magnitude for UI display
     float TotalMagnitude = 0.0f;
-    
+
     for (const FStatisticValue& StatMod : OnApplyStatModifications)
     {
         TotalMagnitude += FMath::Abs(StatMod.Value);
     }
-    
+
     return TotalMagnitude;
 }
 
@@ -224,7 +224,7 @@ EDataValidationResult UNomadInstantEffectConfig::IsDataValid(FDataValidationCont
 
     if (Result == EDataValidationResult::Valid)
     {
-        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Instant effect config validation passed: %s"), 
+        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Instant effect config validation passed: %s"),
                           *EffectName.ToString());
     }
 

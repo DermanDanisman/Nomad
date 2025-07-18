@@ -12,7 +12,7 @@ class ACharacter;
  * UNomadStatusEffectIntegrationTestLibrary
  * ---------------------------------------
  * Blueprint function library for easy access to status effect integration validation.
- * 
+ *
  * This provides Blueprint-callable functions to test the integration of unused status effect methods.
  * Can be used in Blueprint graphs, called from console commands, or used in automated testing.
  */
@@ -25,7 +25,7 @@ public:
     /**
      * Runs all status effect integration validation tests on the specified character.
      * This is the main entry point for comprehensive testing.
-     * 
+     *
      * @param Character Character to test on (usually the player character)
      * @return true if all tests pass, false if any test fails
      */
@@ -34,7 +34,7 @@ public:
 
     /**
      * Tests specifically the jump blocking integration for severe survival conditions.
-     * 
+     *
      * @param Character Character to test on
      * @return true if jump blocking tests pass, false otherwise
      */
@@ -43,7 +43,7 @@ public:
 
     /**
      * Tests specifically the movement speed synchronization integration.
-     * 
+     *
      * @param Character Character to test on
      * @return true if movement speed sync tests pass, false otherwise
      */
@@ -52,7 +52,7 @@ public:
 
     /**
      * Tests the full survival effect integration (hunger, thirst, temperature effects).
-     * 
+     *
      * @param Character Character to test on
      * @return true if survival effect tests pass, false otherwise
      */
@@ -62,7 +62,7 @@ public:
     /**
      * Gets the player character for testing purposes.
      * Convenience function to get a test target in Blueprint.
-     * 
+     *
      * @param WorldContext World context for finding the player
      * @return Player character if found, nullptr otherwise
      */
@@ -71,7 +71,7 @@ public:
 
     /**
      * Logs test results to the console and on-screen debug messages.
-     * 
+     *
      * @param TestName Name of the test that was run
      * @param bPassed Whether the test passed or failed
      * @param Details Additional details about the test result
@@ -82,7 +82,7 @@ public:
     /**
      * Simulates severe survival conditions for testing purposes.
      * This is a debug function that forces survival stats to critical levels.
-     * 
+     *
      * @param Character Character to modify
      * @param bStarvation Whether to simulate starvation (hunger = 0)
      * @param bDehydration Whether to simulate dehydration (thirst = 0)
@@ -93,7 +93,7 @@ public:
 
     /**
      * Restores character to normal survival conditions after testing.
-     * 
+     *
      * @param Character Character to restore
      */
     UFUNCTION(BlueprintCallable, Category="Debug|Status Effect Tests", CallInEditor=true)

@@ -186,7 +186,7 @@ void AMultiplayerLobbyGameMode::PostLogin(APlayerController* NewPlayer)
         LobbyController->PlayerInfo.PlayerID = NextPlayerID++;
         LobbyController->PlayerInfo.PlayerUniqueNetId = LobbyController->PlayerState->GetUniqueId();
     };
-    
+
     // Optionally refresh session state (e.g., update UI, propagate changes to the session subsystem).
     ScheduleRefresh();
 }

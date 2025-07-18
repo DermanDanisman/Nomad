@@ -127,9 +127,9 @@ protected:
     // -------------------------------------------------------------------------
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-    
-    /** 
-     * A function added by Nomad Dev Team 
+
+    /**
+     * A function added by Nomad Dev Team
      * → Called when the player wants to switch which quickbar is “live.”
      *    NewQuickbarIndex should be 0 or 1.
      */

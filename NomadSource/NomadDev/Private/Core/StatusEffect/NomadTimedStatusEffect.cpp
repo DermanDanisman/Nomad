@@ -24,7 +24,7 @@ UNomadTimedStatusEffect::UNomadTimedStatusEffect()
     LastTickDamage = 0.0f;
     StackCount = 1;
     OwningManager = nullptr;
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[TIMED] Timed status effect constructed"));
 }
 
@@ -60,7 +60,7 @@ void UNomadTimedStatusEffect::NomadStartEffectWithManager(ACharacter* Character,
     // Called by the manager to start the effect and bind back to the manager for stack/tick queries.
     CharacterOwner = Character;
     OwningManager = Manager;
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Starting effect with manager binding"));
     OnStatusEffectStarts_Implementation(Character);
 }
@@ -82,9 +82,9 @@ void UNomadTimedStatusEffect::OnStacked_Implementation(const int32 NewStackCount
     // Called when the effect is stacked (e.g., poison applied multiple times).
     StackCount = NewStackCount;
     RestartTimerIfStacking();
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Effect stacked to %d, timers restarted"), NewStackCount);
-    
+
     // Reapply persistent modifiers with new stack count
     const UNomadTimedEffectConfig* Config = GetEffectConfig();
     if (Config && Config->ApplicationMode != EStatusEffectApplicationMode::DamageEvent)
@@ -99,7 +99,7 @@ void UNomadTimedStatusEffect::OnRefreshed_Implementation()
     // Called when the effect is refreshed (reapplied at max stacks).
     RestartTimerIfStacking();
     UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Effect refreshed, duration reset"));
-    
+
     // Optionally reapply modifiers
     const UNomadTimedEffectConfig* Config = GetEffectConfig();
     if (Config && Config->ApplicationMode != EStatusEffectApplicationMode::DamageEvent)
@@ -113,9 +113,9 @@ void UNomadTimedStatusEffect::OnUnstacked(int32 NewStackCount)
 {
     // Called by manager when a stack is removed.
     StackCount = NewStackCount;
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Effect unstacked to %d"), NewStackCount);
-    
+
     if (StackCount > 0)
     {
         // Update persistent modifiers for new stack count
@@ -125,7 +125,7 @@ void UNomadTimedStatusEffect::OnUnstacked(int32 NewStackCount)
             RemoveAttributeSetModifier();
             ApplyAttributeSetModifier();
         }
-        
+
         // Restart timers if stacking refreshes duration
         if (Config && Config->bStackingRefreshesDuration)
         {
@@ -150,12 +150,12 @@ void UNomadTimedStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Ch
 {
     // Called when the effect starts on a character (ACF base).
     // Handles config-driven initialization, stat/damage application, and timer setup.
-    
+
     Super::OnStatusEffectStarts_Implementation(Character);
     SetEffectLifecycleState(EEffectLifecycleState::Active);
 
     UNomadTimedEffectConfig* Config = GetEffectConfig();
-    if (!Config || !CharacterOwner) 
+    if (!Config || !CharacterOwner)
     {
         UE_LOG_AFFLICTION(Error, TEXT("[TIMED] Cannot start - missing config or character"));
         return;
@@ -174,7 +174,7 @@ void UNomadTimedStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Ch
     // Apply start stat modifications, scaled by current stack count
     int32 CurrentStacks = GetCurrentStackCount();
     StackCount = CurrentStacks;
-    
+
     if (Config->OnStartStatModifications.Num() > 0)
     {
         TArray<FStatisticValue> ScaledMods = Config->OnStartStatModifications;
@@ -191,7 +191,7 @@ void UNomadTimedStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Ch
     {
         ApplyAttributeSetModifier();
     }
-    
+
     // Sync movement speed modifiers to ensure proper application of movement changes
     SyncMovementSpeedModifier(Character, 1.0f);
 
@@ -200,7 +200,7 @@ void UNomadTimedStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Ch
 
     // Setup timers for duration and periodic ticking
     SetupTimers();
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Effect started successfully with %d stacks"), CurrentStacks);
 }
 
@@ -208,18 +208,18 @@ void UNomadTimedStatusEffect::OnStatusEffectEnds_Implementation()
 {
     // Called when the effect is removed from the character (ACF base).
     // Handles stat/damage cleanup, timer removal, and analytics.
-    
+
     UNomadTimedEffectConfig* Config = GetEffectConfig();
     if (Config)
     {
         // Only apply end logic if the effect is truly ending
-        if (GetEffectLifecycleState() != EEffectLifecycleState::Active && 
+        if (GetEffectLifecycleState() != EEffectLifecycleState::Active &&
             GetEffectLifecycleState() != EEffectLifecycleState::Ending)
         {
             UE_LOG_AFFLICTION(Warning, TEXT("[TIMED] End called on non-active effect"));
             return;
         }
-        
+
         // Apply end stat modifications
         if (Config->OnEndStatModifications.Num() > 0)
         {
@@ -232,10 +232,10 @@ void UNomadTimedStatusEffect::OnStatusEffectEnds_Implementation()
         {
             RemoveAttributeSetModifier();
         }
-        
+
         // Remove movement speed modifiers and sync to ensure proper cleanup
         RemoveMovementSpeedModifier(CharacterOwner);
-        
+
         // Trigger chain effects if configured
         if (Config->bTriggerDeactivationChainEffects && Config->DeactivationChainEffects.Num() > 0)
         {
@@ -246,13 +246,13 @@ void UNomadTimedStatusEffect::OnStatusEffectEnds_Implementation()
 
     // Clear timers
     ClearTimers();
-    
+
     // Trigger Blueprint event
     OnTimedEffectEnded();
 
     // Call parent implementation
     Super::OnStatusEffectEnds_Implementation();
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Effect ended successfully"));
 }
 
@@ -264,7 +264,7 @@ void UNomadTimedStatusEffect::SetupTimers()
 {
     // Sets up timers for effect expiration (duration/ticks) and periodic ticking (if periodic).
     const UNomadTimedEffectConfig* Config = GetEffectConfig();
-    if (!Config || !CharacterOwner || !CharacterOwner->GetWorld()) 
+    if (!Config || !CharacterOwner || !CharacterOwner->GetWorld())
     {
         UE_LOG_AFFLICTION(Warning, TEXT("[TIMED] Cannot setup timers - missing config/character/world"));
         return;
@@ -315,13 +315,13 @@ void UNomadTimedStatusEffect::ClearTimers()
 {
     // Clears any running timers (for stacking, end, or removal).
     if (!CharacterOwner || !CharacterOwner->GetWorld()) return;
-    
+
     UWorld* World = CharacterOwner->GetWorld();
     FTimerManager& TimerManager = World->GetTimerManager();
-    
+
     TimerManager.ClearTimer(TimerHandle_End);
     TimerManager.ClearTimer(TimerHandle_Tick);
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[TIMED] Timers cleared"));
 }
 
@@ -338,9 +338,9 @@ void UNomadTimedStatusEffect::HandleTick()
     ++CurrentTickCount;
     int32 CurrentStacks = GetCurrentStackCount();
     StackCount = CurrentStacks;
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[TIMED] Tick %d with %d stacks"), CurrentTickCount, CurrentStacks);
-    
+
     // Apply tick stat modifications, scaled by stack count
     if (Config->OnTickStatModifications.Num() > 0)
     {
@@ -359,7 +359,7 @@ void UNomadTimedStatusEffect::HandleTick()
     // Check if we've reached the tick limit for tick-based duration
     if (Config->DurationMode == EEffectDurationMode::Ticks && CurrentTickCount >= Config->NumTicks)
     {
-        UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Reached tick limit (%d/%d), ending effect"), 
+        UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Reached tick limit (%d/%d), ending effect"),
                           CurrentTickCount, Config->NumTicks);
         HandleEnd();
     }
@@ -369,7 +369,7 @@ void UNomadTimedStatusEffect::HandleEnd()
 {
     // Called when duration/tick cycle completes.
     UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Effect duration expired"));
-    
+
     ClearTimers();
 
     const UNomadTimedEffectConfig* Config = GetEffectConfig();
@@ -421,7 +421,7 @@ void UNomadTimedStatusEffect::ApplyAttributeSetModifier()
     }
 
     UARSStatisticsComponent* StatsComp = CharacterOwner->FindComponentByClass<UARSStatisticsComponent>();
-    if (!StatsComp) 
+    if (!StatsComp)
     {
         UE_LOG_AFFLICTION(Warning, TEXT("[TIMED] No statistics component found for attribute modifier"));
         return;
@@ -432,7 +432,7 @@ void UNomadTimedStatusEffect::ApplyAttributeSetModifier()
 
     // Create a scaled version of the modifier based on stack count
     FAttributesSetModifier ScaledModifier = Config->AttributeModifier;
-    
+
     // Scale all modifiers by stack count
     for (FAttributeModifier& AttrMod : ScaledModifier.PrimaryAttributesMod)
     {
@@ -451,10 +451,10 @@ void UNomadTimedStatusEffect::ApplyAttributeSetModifier()
 
     // Apply the scaled modifier
     StatsComp->AddAttributeSetModifier(ScaledModifier);
-    
+
     // Trigger Blueprint event
     OnTimedEffectAttributeModifierApplied(ScaledModifier);
-    
+
     UE_LOG_AFFLICTION(Verbose, TEXT("[TIMED] Applied attribute set modifier with %d stacks"), StackCount);
 }
 
@@ -501,7 +501,7 @@ void UNomadTimedStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>& I
             if (StatsComp)
             {
                 UNomadStatusEffectUtils::ApplyStatModifications(StatsComp, InStatMods);
-                
+
                 // Track health changes for analytics
                 for (const FStatisticValue& Mod : InStatMods)
                 {
@@ -543,7 +543,7 @@ void UNomadTimedStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>& I
             {
                 UNomadStatusEffectUtils::ApplyStatModifications(StatsComp, InStatMods);
             }
-            
+
             if (Config->DamageTypeClass)
             {
                 for (const FStatisticValue& Mod : InStatMods)
@@ -588,7 +588,7 @@ void UNomadTimedStatusEffect::TriggerChainEffects(const TArray<TSoftClassPtr<UNo
 {
     // Trigger chain effects through the manager
     if (!OwningManager || !CharacterOwner) return;
-    
+
     for (const TSoftClassPtr<UNomadBaseStatusEffect>& ChainEffectClass : ChainEffects)
     {
         if (!ChainEffectClass.IsNull())
@@ -601,7 +601,7 @@ void UNomadTimedStatusEffect::TriggerChainEffects(const TArray<TSoftClassPtr<UNo
             }
         }
     }
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[TIMED] Triggered %d chain effects"), ChainEffects.Num());
 }
 
@@ -609,16 +609,16 @@ int32 UNomadTimedStatusEffect::GetCurrentStackCount() const
 {
     // Returns the current stack count for this effect from the manager, or fallback value.
     if (!OwningManager) return StackCount;
-    
+
     const UNomadTimedEffectConfig* Config = GetEffectConfig();
     if (!Config) return StackCount;
-    
+
     const int32 Index = OwningManager->FindActiveEffectIndexByTag(Config->EffectTag);
     if (Index != INDEX_NONE)
     {
         return OwningManager->GetActiveEffects()[Index].StackCount;
     }
-    
+
     return StackCount;
 }
 
@@ -638,7 +638,7 @@ float UNomadTimedStatusEffect::GetRemainingDuration() const
     const UNomadTimedEffectConfig* Config = GetEffectConfig();
     if (!Config || !CharacterOwner || !CharacterOwner->GetWorld())
         return 0.0f;
-    
+
     float TotalDuration = 0.0f;
     if (Config->bIsPeriodic)
     {
@@ -651,7 +651,7 @@ float UNomadTimedStatusEffect::GetRemainingDuration() const
             TotalDuration = Config->TickInterval * Config->NumTicks;
         }
     }
-    
+
     const float Elapsed = GetUptime();
     return FMath::Max(0.0f, TotalDuration - Elapsed);
 }
@@ -661,7 +661,7 @@ float UNomadTimedStatusEffect::GetProgressPercentage() const
     const UNomadTimedEffectConfig* Config = GetEffectConfig();
     if (!Config || !CharacterOwner || !CharacterOwner->GetWorld())
         return 0.0f;
-    
+
     float TotalDuration = 0.0f;
     if (Config->bIsPeriodic)
     {
@@ -674,10 +674,10 @@ float UNomadTimedStatusEffect::GetProgressPercentage() const
             TotalDuration = Config->TickInterval * Config->NumTicks;
         }
     }
-    
+
     if (TotalDuration <= 0.0f)
         return 1.0f;
-    
+
     const float Elapsed = GetUptime();
     return FMath::Clamp(Elapsed / TotalDuration, 0.0f, 1.0f);
 }

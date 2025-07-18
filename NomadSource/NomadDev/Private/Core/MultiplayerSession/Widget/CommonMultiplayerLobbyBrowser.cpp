@@ -2,7 +2,7 @@
 // UCommonMultiplayerLobbyBrowser.cpp
 //
 // Implements the lobby browser widget functionality. It sets up the lobby
-// search by obtaining the session subsystem, binding delegates, and triggering 
+// search by obtaining the session subsystem, binding delegates, and triggering
 // the session search. Results are processed and passed to Blueprints.
 // -----------------------------------------------------------------------------
 

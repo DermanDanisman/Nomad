@@ -8,7 +8,7 @@
 
 struct FPlayerInfo;
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API AMultiplayerGameState : public AGameStateBase

@@ -110,7 +110,7 @@ struct FGatherableActorInfo
     bool bUseNextStage;
 
     // === Visual & Mesh Settings ===
-    
+
     /**
      * Mesh asset to represent the gatherable actor in its initial state (e.g., a full tree).
      */
@@ -131,7 +131,7 @@ struct FGatherableActorInfo
     TArray<UStaticMesh*> GatherStageMeshes;
 
     // === Tags & Gameplay Identity ===
-    
+
     /**
      * Gameplay tag to categorize this resource type (e.g., Resource.Tree).
      */

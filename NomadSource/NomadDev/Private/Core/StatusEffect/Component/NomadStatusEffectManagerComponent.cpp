@@ -23,10 +23,10 @@ UNomadStatusEffectManagerComponent::UNomadStatusEffectManagerComponent()
     // Initialize analytics tracking
     TotalStatusEffectDamage = 0.0f;
     StatusEffectDamageTotals.Empty();
-    
+
     // Initialize active effects array
     ActiveEffects.Empty();
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[MANAGER] Status effect manager constructed"));
 }
 
@@ -36,7 +36,7 @@ void UNomadStatusEffectManagerComponent::GetLifetimeReplicatedProps(TArray<FLife
 
     // Replicate active effects for client UI
     DOREPLIFETIME(UNomadStatusEffectManagerComponent, ActiveEffects);
-    
+
     // Replicate blocking tags for client-side action validation
     DOREPLIFETIME(UNomadStatusEffectManagerComponent, ActiveBlockingTags);
 }
@@ -49,7 +49,7 @@ void UNomadStatusEffectManagerComponent::OnRep_ActiveEffects()
 {
     // Called automatically on clients when ActiveEffects array is updated
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[MANAGER] Active effects replicated to client"));
-    
+
     // Notify any listening UI components
     if (AActor* Owner = GetOwner())
     {
@@ -72,7 +72,7 @@ void UNomadStatusEffectManagerComponent::AddBlockingTag(const FGameplayTag& Tag)
         UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Attempted to add invalid blocking tag"));
         return;
     }
-    
+
     ActiveBlockingTags.AddTag(Tag); // Adds or increments stack count
     UE_LOG_AFFLICTION(Verbose, TEXT("[MANAGER] Added blocking tag: %s"), *Tag.ToString());
 }
@@ -84,7 +84,7 @@ void UNomadStatusEffectManagerComponent::RemoveBlockingTag(const FGameplayTag& T
         UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Attempted to remove invalid blocking tag"));
         return;
     }
-    
+
     ActiveBlockingTags.RemoveTag(Tag); // Removes or decrements stack count
     UE_LOG_AFFLICTION(Verbose, TEXT("[MANAGER] Removed blocking tag: %s"), *Tag.ToString());
 }
@@ -106,25 +106,25 @@ UNomadSurvivalStatusEffect* UNomadStatusEffectManagerComponent::ApplyHazardDoTEf
         UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Cannot apply hazard effect - effect class is null"));
         return nullptr;
     }
-    
+
     // Create the survival effect instance
     UNomadSurvivalStatusEffect* Effect = NewObject<UNomadSurvivalStatusEffect>(GetOwner(), EffectClass);
     if (Effect)
     {
         // Configure the DoT percentage
         Effect->SetDoTPercent(DotPercent);
-        
+
         // Register with active effects and activate
         AddStatusEffect(Effect, GetOwner());
         Effect->Nomad_OnStatusEffectStarts(Cast<ACharacter>(GetOwner()));
-        
+
         UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Applied hazard DoT effect with %.3f%% DoT"), DotPercent * 100.0f);
     }
     else
     {
         UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Failed to create hazard effect instance"));
     }
-    
+
     return Effect;
 }
 
@@ -146,7 +146,7 @@ void UNomadStatusEffectManagerComponent::ApplyTimedStatusEffect(TSubclassOf<UNom
     UObject* EffectCDO = StatusEffectClass->GetDefaultObject();
     if (!EffectCDO || !EffectCDO->IsA(UNomadTimedStatusEffect::StaticClass()))
     {
-        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] ApplyTimedStatusEffect requires UNomadTimedStatusEffect class, got %s"), 
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] ApplyTimedStatusEffect requires UNomadTimedStatusEffect class, got %s"),
                           StatusEffectClass ? *StatusEffectClass->GetName() : TEXT("null"));
         return;
     }
@@ -157,12 +157,12 @@ void UNomadStatusEffectManagerComponent::ApplyTimedStatusEffect(TSubclassOf<UNom
     {
         // Set the duration
         TimedEffect->SetDuration(Duration);
-        
+
         // Apply the effect through the standard system
         AddStatusEffect(TimedEffect, GetOwner());
         TimedEffect->Nomad_OnStatusEffectStarts(Cast<ACharacter>(GetOwner()));
-        
-        UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Applied timed status effect %s with duration %f seconds"), 
+
+        UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Applied timed status effect %s with duration %f seconds"),
                           *StatusEffectClass->GetName(), Duration);
     }
     else
@@ -183,7 +183,7 @@ void UNomadStatusEffectManagerComponent::ApplyInfiniteStatusEffect(TSubclassOf<U
     UObject* EffectCDO = StatusEffectClass->GetDefaultObject();
     if (!EffectCDO || !EffectCDO->IsA(UNomadInfiniteStatusEffect::StaticClass()))
     {
-        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] ApplyInfiniteStatusEffect requires UNomadInfiniteStatusEffect class, got %s"), 
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] ApplyInfiniteStatusEffect requires UNomadInfiniteStatusEffect class, got %s"),
                           StatusEffectClass ? *StatusEffectClass->GetName() : TEXT("null"));
         return;
     }
@@ -195,8 +195,8 @@ void UNomadStatusEffectManagerComponent::ApplyInfiniteStatusEffect(TSubclassOf<U
         // Apply the effect through the standard system
         AddStatusEffect(InfiniteEffect, GetOwner());
         InfiniteEffect->Nomad_OnStatusEffectStarts(Cast<ACharacter>(GetOwner()));
-        
-        UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Applied infinite status effect %s"), 
+
+        UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Applied infinite status effect %s"),
                           *StatusEffectClass->GetName());
     }
     else
@@ -212,7 +212,7 @@ void UNomadStatusEffectManagerComponent::ApplyInfiniteStatusEffect(TSubclassOf<U
 void UNomadStatusEffectManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Ending play, cleaning up %d active effects"), ActiveEffects.Num());
-    
+
     // Clean up all active effects
     for (const FActiveEffect& Effect : ActiveEffects)
     {
@@ -221,13 +221,13 @@ void UNomadStatusEffectManagerComponent::EndPlay(const EEndPlayReason::Type EndP
             Effect.EffectInstance->Nomad_OnStatusEffectEnds();
         }
     }
-    
+
     // Clear the array
     ActiveEffects.Empty();
-    
+
     // Reset analytics
     ResetStatusEffectDamageTracking();
-    
+
     Super::EndPlay(EndPlayReason);
 }
 
@@ -242,12 +242,12 @@ void UNomadStatusEffectManagerComponent::AddStatusEffectDamage(const FGameplayTa
         UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot add damage for invalid effect tag"));
         return;
     }
-    
+
     // Update totals
     TotalStatusEffectDamage += Delta;
     StatusEffectDamageTotals.FindOrAdd(EffectTag) += Delta;
-    
-    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[MANAGER] Added %.2f damage for effect %s (total: %.2f)"), 
+
+    UE_LOG_AFFLICTION(VeryVerbose, TEXT("[MANAGER] Added %.2f damage for effect %s (total: %.2f)"),
                       Delta, *EffectTag.ToString(), StatusEffectDamageTotals[EffectTag]);
 }
 
@@ -273,7 +273,7 @@ TMap<FGameplayTag, float> UNomadStatusEffectManagerComponent::GetAllStatusEffect
 void UNomadStatusEffectManagerComponent::ResetStatusEffectDamageTracking()
 {
     UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Resetting damage tracking (was: %.2f total)"), TotalStatusEffectDamage);
-    
+
     TotalStatusEffectDamage = 0.0f;
     StatusEffectDamageTotals.Empty();
 }
@@ -284,8 +284,8 @@ void UNomadStatusEffectManagerComponent::ResetStatusEffectDamageTracking()
 
 int32 UNomadStatusEffectManagerComponent::FindActiveEffectIndexByTag(const FGameplayTag Tag) const
 {
-    return ActiveEffects.IndexOfByPredicate([&](const FActiveEffect& Effect) { 
-        return Effect.Tag == Tag; 
+    return ActiveEffects.IndexOfByPredicate([&](const FActiveEffect& Effect) {
+        return Effect.Tag == Tag;
     });
 }
 
@@ -395,7 +395,7 @@ void UNomadStatusEffectManagerComponent::Nomad_AddStatusEffect(
         UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Cannot add null status effect class"));
         return;
     }
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Adding status effect: %s"), *StatusEffectClass->GetName());
     CreateAndApplyStatusEffect(StatusEffectClass, Instigator);
 }
@@ -407,7 +407,7 @@ void UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffect(const FGamepla
         UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot remove effect with invalid tag"));
         return;
     }
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Removing status effect: %s"), *StatusEffectTag.ToString());
     RemoveStatusEffect(StatusEffectTag);
 }
@@ -419,9 +419,9 @@ void UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffect(const FGamepla
 bool UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectSmart(FGameplayTag StatusEffectTag)
 {
     const int32 Index = FindActiveEffectIndexByTag(StatusEffectTag);
-    if (Index == INDEX_NONE) 
+    if (Index == INDEX_NONE)
     {
-        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot smart remove non-existent effect: %s"), 
+        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot smart remove non-existent effect: %s"),
                           *StatusEffectTag.ToString());
         return false;
     }
@@ -429,50 +429,50 @@ bool UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectSmart(FGameplay
     const FActiveEffect& Effect = ActiveEffects[Index];
     if (!Effect.EffectInstance)
     {
-        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Effect instance is null for %s"), 
+        UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Effect instance is null for %s"),
                           *StatusEffectTag.ToString());
         return false;
     }
 
     // Determine effect type and removal strategy
     EStatusEffectType EffectType = GetStatusEffectType(StatusEffectTag);
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removing effect %s (type: %s, stacks: %d)"), 
+
+    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removing effect %s (type: %s, stacks: %d)"),
                       *StatusEffectTag.ToString(),
                       *StaticEnum<EStatusEffectType>()->GetNameStringByValue((int64)EffectType),
                       Effect.StackCount);
-    
+
     switch (EffectType)
     {
         case EStatusEffectType::Timed:
             {
                 // Timed effects: Remove ALL stacks (like bandage removing all bleeding)
-                UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removal: Removing all %d stacks of timed effect %s"), 
+                UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removal: Removing all %d stacks of timed effect %s"),
                                   Effect.StackCount, *StatusEffectTag.ToString());
                 return Internal_RemoveStatusEffectAdvanced(StatusEffectTag, 0, true, false);
             }
-            
+
         case EStatusEffectType::Infinite:
         case EStatusEffectType::Survival:
             {
                 // Infinite/Survival effects: Complete removal (like water removing dehydration)
-                UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removal: Completely removing infinite/survival effect %s"), 
+                UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removal: Completely removing infinite/survival effect %s"),
                                   *StatusEffectTag.ToString());
                 return Internal_RemoveStatusEffectAdvanced(StatusEffectTag, 0, true, false);
             }
-            
+
         case EStatusEffectType::Instant:
             {
                 // Instant effects shouldn't be active, but handle gracefully
-                UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Trying to remove instant effect %s (should have auto-removed)"), 
+                UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Trying to remove instant effect %s (should have auto-removed)"),
                                   *StatusEffectTag.ToString());
                 return Internal_RemoveStatusEffectAdvanced(StatusEffectTag, 0, true, false);
             }
-            
+
         default:
             {
                 // Unknown type: Default to complete removal
-                UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Unknown effect type for %s, defaulting to complete removal"), 
+                UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Unknown effect type for %s, defaulting to complete removal"),
                                   *StatusEffectTag.ToString());
                 return Internal_RemoveStatusEffectAdvanced(StatusEffectTag, 0, true, false);
             }
@@ -483,9 +483,9 @@ bool UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectStack(FGameplay
 {
     // Only remove a single stack - used for natural decay or weak items
     const int32 Index = FindActiveEffectIndexByTag(StatusEffectTag);
-    if (Index == INDEX_NONE) 
+    if (Index == INDEX_NONE)
     {
-        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot remove stack from non-existent effect: %s"), 
+        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot remove stack from non-existent effect: %s"),
                           *StatusEffectTag.ToString());
         return false;
     }
@@ -493,12 +493,12 @@ bool UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectStack(FGameplay
     // Check if effect is stackable first
     if (!IsStatusEffectStackable(StatusEffectTag))
     {
-        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot remove stack from non-stackable effect %s"), 
+        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot remove stack from non-stackable effect %s"),
                           *StatusEffectTag.ToString());
         return false;
     }
 
-    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Removing single stack from effect %s"), 
+    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Removing single stack from effect %s"),
                       *StatusEffectTag.ToString());
     return Internal_RemoveStatusEffectAdvanced(StatusEffectTag, 1, false, true);
 }
@@ -506,7 +506,7 @@ bool UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectStack(FGameplay
 bool UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectCompletely(FGameplayTag StatusEffectTag)
 {
     // Force complete removal regardless of type
-    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Force removing all stacks of effect %s"), 
+    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Force removing all stacks of effect %s"),
                       *StatusEffectTag.ToString());
     return Internal_RemoveStatusEffectAdvanced(StatusEffectTag, 0, true, false);
 }
@@ -520,7 +520,7 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByParentTag(F
     }
 
     TArray<FGameplayTag> TagsToRemove;
-    
+
     // Find all active effects that match the parent tag
     for (const FActiveEffect& ActiveEffect : ActiveEffects)
     {
@@ -529,7 +529,7 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByParentTag(F
             TagsToRemove.Add(ActiveEffect.Tag);
         }
     }
-    
+
     // Remove all matching effects using smart removal
     int32 RemovedCount = 0;
     for (const FGameplayTag& Tag : TagsToRemove)
@@ -539,8 +539,8 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByParentTag(F
             RemovedCount++;
         }
     }
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removal: Removed %d effects matching parent tag %s"), 
+
+    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removal: Removed %d effects matching parent tag %s"),
                       RemovedCount, *ParentTag.ToString());
     return RemovedCount;
 }
@@ -548,7 +548,7 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByParentTag(F
 int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByCategory(ENomadStatusCategory Category)
 {
     TArray<FGameplayTag> TagsToRemove;
-    
+
     // Find all active effects that match the category
     for (const FActiveEffect& ActiveEffect : ActiveEffects)
     {
@@ -556,7 +556,7 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByCategory(EN
         {
             // Get the effect's category
             ENomadStatusCategory EffectCategory = ENomadStatusCategory::Neutral; // Default fallback
-            
+
             if (UNomadTimedStatusEffect* TimedEffect = Cast<UNomadTimedStatusEffect>(ActiveEffect.EffectInstance))
             {
                 if (UNomadTimedEffectConfig* Config = TimedEffect->GetEffectConfig())
@@ -571,14 +571,14 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByCategory(EN
                     EffectCategory = Config->Category;
                 }
             }
-            
+
             if (EffectCategory == Category)
             {
                 TagsToRemove.Add(ActiveEffect.Tag);
             }
         }
     }
-    
+
     // Remove all matching effects
     int32 RemovedCount = 0;
     for (const FGameplayTag& Tag : TagsToRemove)
@@ -588,8 +588,8 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByCategory(EN
             RemovedCount++;
         }
     }
-    
-    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Removed %d effects from category %s"), 
+
+    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Removed %d effects from category %s"),
                       RemovedCount, *StaticEnum<ENomadStatusCategory>()->GetNameStringByValue((int64)Category));
     return RemovedCount;
 }
@@ -597,7 +597,7 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsByCategory(EN
 int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsMultiple(const TArray<FGameplayTag>& StatusEffectTags)
 {
     int32 RemovedCount = 0;
-    
+
     for (const FGameplayTag& Tag : StatusEffectTags)
     {
         if (Nomad_RemoveStatusEffectSmart(Tag))
@@ -605,7 +605,7 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsMultiple(cons
             RemovedCount++;
         }
     }
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Smart removal: Removed %d effects from batch removal"), RemovedCount);
     return RemovedCount;
 }
@@ -615,9 +615,9 @@ int32 UNomadStatusEffectManagerComponent::Nomad_RemoveStatusEffectsMultiple(cons
 // =====================================================
 
 bool UNomadStatusEffectManagerComponent::Internal_RemoveStatusEffectAdvanced(
-    FGameplayTag StatusEffectTag, 
-    int32 StacksToRemove, 
-    bool bForceComplete, 
+    FGameplayTag StatusEffectTag,
+    int32 StacksToRemove,
+    bool bForceComplete,
     bool bRespectStackability)
 {
     const int32 Index = FindActiveEffectIndexByTag(StatusEffectTag);
@@ -628,7 +628,7 @@ bool UNomadStatusEffectManagerComponent::Internal_RemoveStatusEffectAdvanced(
 
     // Determine actual removal behavior
     int32 ActualStacksToRemove;
-    
+
     if (bForceComplete)
     {
         // Force complete removal
@@ -637,7 +637,7 @@ bool UNomadStatusEffectManagerComponent::Internal_RemoveStatusEffectAdvanced(
     else if (bRespectStackability && !IsStatusEffectStackable(StatusEffectTag))
     {
         // Trying to remove stacks from non-stackable effect
-        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot remove stacks from non-stackable effect %s"), 
+        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Cannot remove stacks from non-stackable effect %s"),
                           *StatusEffectTag.ToString());
         return false;
     }
@@ -649,14 +649,14 @@ bool UNomadStatusEffectManagerComponent::Internal_RemoveStatusEffectAdvanced(
 
     const int32 NewStacks = PrevStacks - ActualStacksToRemove;
 
-    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Advanced removal: %s - Removing %d stacks (was %d, will be %d)"), 
+    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Advanced removal: %s - Removing %d stacks (was %d, will be %d)"),
                       *StatusEffectTag.ToString(), ActualStacksToRemove, PrevStacks, NewStacks);
 
     if (NewStacks > 0)
     {
         // Update stack count and notify effect
         Effect.StackCount = NewStacks;
-        
+
         if (Effect.EffectInstance)
         {
             if (UNomadTimedStatusEffect* TimedEffect = Cast<UNomadTimedStatusEffect>(Effect.EffectInstance))
@@ -668,7 +668,7 @@ bool UNomadStatusEffectManagerComponent::Internal_RemoveStatusEffectAdvanced(
                 InfiniteEffect->OnUnstacked(NewStacks);
             }
         }
-        
+
         NotifyAffliction(StatusEffectTag, ENomadAfflictionNotificationType::Unstacked, PrevStacks, NewStacks);
     }
     else
@@ -679,7 +679,7 @@ bool UNomadStatusEffectManagerComponent::Internal_RemoveStatusEffectAdvanced(
             Effect.EffectInstance->Nomad_OnStatusEffectEnds();
             Effect.EffectInstance->ConditionalBeginDestroy();
         }
-        
+
         ActiveEffects.RemoveAt(Index);
         NotifyAffliction(StatusEffectTag, ENomadAfflictionNotificationType::Removed, PrevStacks, 0);
     }
@@ -698,7 +698,7 @@ void UNomadStatusEffectManagerComponent::CreateAndApplyStatusEffect_Implementati
         UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] StatusEffectToConstruct not set or invalid!"));
         return;
     }
-    
+
     UObject* EffectCDO = StatusEffectToConstruct->GetDefaultObject();
     if (!EffectCDO) return;
 
@@ -748,7 +748,7 @@ void UNomadStatusEffectManagerComponent::CreateAndApplyStatusEffect_Implementati
                         Cast<UNomadTimedStatusEffect>(Eff.EffectInstance)->OnStacked(Eff.StackCount);
                     }
                     NotifyAffliction(EffectTag, ENomadAfflictionNotificationType::Stacked, PrevStacks, Eff.StackCount);
-                    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Stacked timed effect %s to %d stacks"), 
+                    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Stacked timed effect %s to %d stacks"),
                                       *EffectTag.ToString(), Eff.StackCount);
                 }
                 else
@@ -758,7 +758,7 @@ void UNomadStatusEffectManagerComponent::CreateAndApplyStatusEffect_Implementati
                         Cast<UNomadTimedStatusEffect>(Eff.EffectInstance)->OnRefreshed();
                     }
                     NotifyAffliction(EffectTag, ENomadAfflictionNotificationType::Refreshed, Eff.StackCount, Eff.StackCount);
-                    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Refreshed timed effect %s (at max stacks)"), 
+                    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Refreshed timed effect %s (at max stacks)"),
                                       *EffectTag.ToString());
                 }
             }
@@ -769,7 +769,7 @@ void UNomadStatusEffectManagerComponent::CreateAndApplyStatusEffect_Implementati
                     Cast<UNomadTimedStatusEffect>(Eff.EffectInstance)->OnRefreshed();
                 }
                 NotifyAffliction(EffectTag, ENomadAfflictionNotificationType::Refreshed, Eff.StackCount, Eff.StackCount);
-                UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Refreshed non-stackable timed effect %s"), 
+                UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Refreshed non-stackable timed effect %s"),
                                   *EffectTag.ToString());
             }
             return;
@@ -817,7 +817,7 @@ void UNomadStatusEffectManagerComponent::CreateAndApplyStatusEffect_Implementati
                         Cast<UNomadInfiniteStatusEffect>(Eff.EffectInstance)->OnStacked(Eff.StackCount);
                     }
                     NotifyAffliction(EffectTag, ENomadAfflictionNotificationType::Stacked, PrevStacks, Eff.StackCount);
-                    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Stacked infinite effect %s to %d stacks"), 
+                    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Stacked infinite effect %s to %d stacks"),
                                       *EffectTag.ToString(), Eff.StackCount);
                 }
                 else
@@ -827,7 +827,7 @@ void UNomadStatusEffectManagerComponent::CreateAndApplyStatusEffect_Implementati
                         Cast<UNomadInfiniteStatusEffect>(Eff.EffectInstance)->OnRefreshed();
                     }
                     NotifyAffliction(EffectTag, ENomadAfflictionNotificationType::Refreshed, Eff.StackCount, Eff.StackCount);
-                    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Refreshed infinite effect %s (at max stacks)"), 
+                    UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Refreshed infinite effect %s (at max stacks)"),
                                       *EffectTag.ToString());
                 }
             }
@@ -838,7 +838,7 @@ void UNomadStatusEffectManagerComponent::CreateAndApplyStatusEffect_Implementati
                     Cast<UNomadInfiniteStatusEffect>(Eff.EffectInstance)->OnRefreshed();
                 }
                 NotifyAffliction(EffectTag, ENomadAfflictionNotificationType::Refreshed, Eff.StackCount, Eff.StackCount);
-                UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Refreshed non-stackable infinite effect %s"), 
+                UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Refreshed non-stackable infinite effect %s"),
                                   *EffectTag.ToString());
             }
             return;
@@ -856,7 +856,7 @@ void UNomadStatusEffectManagerComponent::CreateAndApplyStatusEffect_Implementati
         }
         return;
     }
-    
+
     UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Unknown effect type for class %s"), *StatusEffectToConstruct->GetName());
 }
 
@@ -891,7 +891,7 @@ void UNomadStatusEffectManagerComponent::RemoveStatusEffect_Implementation(const
                 InfiniteStatusEffect->OnUnstacked(Eff.StackCount);
             }
         }
-        UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Removed 1 stack from %s (now %d stacks)"), 
+        UE_LOG_AFFLICTION(Log, TEXT("[MANAGER] Removed 1 stack from %s (now %d stacks)"),
                           *EffectTag.ToString(), Eff.StackCount);
     }
     else

@@ -19,7 +19,7 @@ void UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromAttribute(ACharacte
     // Syncs movement speed from a configurable attribute tag to ACF movement component.
     // This replaces hardcoded attribute tags with a configurable approach.
     if (!Character) return;
-    
+
     const UARSStatisticsComponent* StatsComp = Character->FindComponentByClass<UARSStatisticsComponent>();
     UACFCharacterMovementComponent* MoveComp = Character->FindComponentByClass<UACFCharacterMovementComponent>();
     if (!StatsComp || !MoveComp) return;
@@ -61,7 +61,7 @@ bool UNomadStatusEffectGameplayHelpers::IsActionBlocked(ACharacter* Character, c
     // Generic method to check if any action is blocked by active status effects.
     // This reduces code duplication and provides a flexible blocking system.
     if (!Character || !BlockingTag.IsValid()) return false;
-    
+
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     return (SEManager && SEManager->HasBlockingTag(BlockingTag));
 }
@@ -80,10 +80,10 @@ void UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedStatusEffect(
      * This is the recommended approach for temporary movement speed modifications.
      */
     if (!Character || !StatusEffectClass) return;
-    
+
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!SEManager) return;
-    
+
     // Apply the status effect - it will handle movement speed modifiers via its config
     if (Duration > 0.0f)
     {
@@ -95,7 +95,7 @@ void UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedStatusEffect(
         // Apply infinite effect
         SEManager->ApplyInfiniteStatusEffect(StatusEffectClass);
     }
-    
+
     // Sync movement speed after applying the effect
     SyncMovementSpeedFromDefaultAttribute(Character);
 }
@@ -108,13 +108,13 @@ void UNomadStatusEffectGameplayHelpers::RemoveMovementSpeedStatusEffect(
      * Removes a movement speed effect by its gameplay tag.
      */
     if (!Character || !EffectTag.IsValid()) return;
-    
+
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!SEManager) return;
-    
+
     // Remove the status effect by tag
     SEManager->Nomad_RemoveStatusEffect(EffectTag);
-    
+
     // Sync movement speed after removing the effect
     SyncMovementSpeedFromDefaultAttribute(Character);
 }
@@ -125,10 +125,10 @@ bool UNomadStatusEffectGameplayHelpers::HasActiveMovementSpeedEffects(ACharacter
      * Checks if any movement speed effects are currently active.
      */
     if (!Character) return false;
-    
+
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!SEManager) return false;
-    
+
     // Use configurable movement speed effect tags instead of hardcoded ones
     static TArray<FGameplayTag> MovementEffectTags;
     if (MovementEffectTags.Num() == 0)
@@ -136,7 +136,7 @@ bool UNomadStatusEffectGameplayHelpers::HasActiveMovementSpeedEffects(ACharacter
         // Initialize configurable tags - these could come from a config asset
         MovementEffectTags = GetConfigurableMovementSpeedEffectTags();
     }
-    
+
     for (const FGameplayTag& Tag : MovementEffectTags)
     {
         if (SEManager->HasStatusEffect(Tag))
@@ -144,7 +144,7 @@ bool UNomadStatusEffectGameplayHelpers::HasActiveMovementSpeedEffects(ACharacter
             return true;
         }
     }
-    
+
     return false;
 }
 
@@ -154,12 +154,12 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetActiveMovementSpeedEf
      * Gets all active movement speed effect tags on the character.
      */
     TArray<FGameplayTag> ActiveTags;
-    
+
     if (!Character) return ActiveTags;
-    
+
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!SEManager) return ActiveTags;
-    
+
     // Use configurable movement speed effect tags instead of hardcoded ones
     static TArray<FGameplayTag> MovementEffectTags;
     if (MovementEffectTags.Num() == 0)
@@ -167,7 +167,7 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetActiveMovementSpeedEf
         // Initialize configurable tags - these could come from a config asset
         MovementEffectTags = GetConfigurableMovementSpeedEffectTags();
     }
-    
+
     for (const FGameplayTag& Tag : MovementEffectTags)
     {
         if (SEManager->HasStatusEffect(Tag))
@@ -175,7 +175,7 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetActiveMovementSpeedEf
             ActiveTags.Add(Tag);
         }
     }
-    
+
     return ActiveTags;
 }
 
@@ -184,18 +184,18 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetConfigurableMovementS
     /**
      * Returns configurable movement speed effect tags.
      * This replaces hardcoded tags with a data-driven approach.
-     * 
+     *
      * Note: This could be moved to a config asset or game settings for runtime configuration.
      */
     static TArray<FGameplayTag> ConfigurableTags;
-    
+
     if (ConfigurableTags.Num() == 0)
     {
         // Initialize from configurable source - in the future this could come from:
         // - A data asset (UNomadMovementSpeedTagsConfig)
         // - Game settings (UNomadGameplaySettings)
         // - Project settings (UNomadDeveloperSettings)
-        
+
         ConfigurableTags = {
             FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedBoost"),
             FGameplayTag::RequestGameplayTag("StatusEffect.Movement.SpeedPenalty"),
@@ -206,7 +206,7 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetConfigurableMovementS
             FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia")
         };
     }
-    
+
     return ConfigurableTags;
 }
 
@@ -216,20 +216,20 @@ void UNomadStatusEffectGameplayHelpers::ApplySurvivalMovementPenalty(
 {
     /**
      * Helper method to apply standard survival movement penalty.
-     * 
+     *
      * Note: This method provides a simplified interface, but the recommended approach
      * is to use UNomadSurvivalStatusEffect directly with appropriate config assets
-     * that define PersistentAttributeModifier for movement speed changes and 
+     * that define PersistentAttributeModifier for movement speed changes and
      * BlockingTags for input restrictions.
      */
     if (!Character) return;
-    
+
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!SEManager) return;
-    
+
     // Remove any existing survival movement penalty first
     RemoveSurvivalMovementPenalty(Character);
-    
+
     // Get appropriate survival status effect tag based on penalty level
     FGameplayTag EffectTag;
     switch (PenaltyLevel)
@@ -247,7 +247,7 @@ void UNomadStatusEffectGameplayHelpers::ApplySurvivalMovementPenalty(
         default:
             return; // No penalty for None severity
     }
-    
+
     // Note: This requires creating config assets for each severity level with proper
     // PersistentAttributeModifier values for movement speed reduction.
     // Implementation depends on available survival status effect classes.
@@ -260,19 +260,19 @@ void UNomadStatusEffectGameplayHelpers::RemoveSurvivalMovementPenalty(ACharacter
      * Removes all survival-related movement penalty effects.
      */
     if (!Character) return;
-    
+
     auto* SEManager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
     if (!SEManager) return;
-    
+
     // Remove all types of survival-related movement penalties using their gameplay tags
     FGameplayTag MildTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Mild");
     FGameplayTag HeavyTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Heavy");
     FGameplayTag SevereTag = FGameplayTag::RequestGameplayTag("StatusEffect.Survival.MovementPenalty.Severe");
-    
+
     if (MildTag.IsValid()) SEManager->Nomad_RemoveStatusEffect(MildTag);
     if (HeavyTag.IsValid()) SEManager->Nomad_RemoveStatusEffect(HeavyTag);
     if (SevereTag.IsValid()) SEManager->Nomad_RemoveStatusEffect(SevereTag);
-    
+
     // Sync movement speed after removing effects
     SyncMovementSpeedFromDefaultAttribute(Character);
 }

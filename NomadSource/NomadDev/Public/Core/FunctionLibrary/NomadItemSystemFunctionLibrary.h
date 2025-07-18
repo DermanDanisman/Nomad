@@ -10,7 +10,7 @@
 class UCameraComponent;
 class AACFWorldItem;
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API UNomadItemSystemFunctionLibrary : public UACFItemSystemFunctionLibrary {

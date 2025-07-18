@@ -27,7 +27,7 @@ void ANomadResourceItem::InitializeItem()
 {
     // Verify that the CraftingMaterialData asset is assigned; if not, log an error.
     ensureMsgf(CraftingMaterialData, TEXT("CraftingMaterialData asset is missing or invalid!"));
-    
+
     // Proceed only if the data asset is valid.
     if (CraftingMaterialData)
     {
@@ -66,7 +66,7 @@ void ANomadResourceItem::InitializeItem()
         {
             UE_LOG(LogNomadCraftingMaterial, Warning, TEXT("No GatherSound assigned for Crafting Material: %s"), *CraftingMaterialData->GetName());
         }
-        
+
         // ---------------------------
         // Item Information Setup
         // ---------------------------

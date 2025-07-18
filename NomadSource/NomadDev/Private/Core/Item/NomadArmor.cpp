@@ -14,7 +14,7 @@ void ANomadArmor::BeginPlay()
 {
     // Called when the game starts or when the actor is spawned.
     Super::BeginPlay();
-    
+
     // Initialize the armor's properties using the data asset.
     InitializeItem();
 }
@@ -88,7 +88,7 @@ void ANomadArmor::InitializeItem()
         {
             UE_LOG(LogNomadArmor, Warning, TEXT("PrimaryAttributesRequirement is empty for armor: %s"), *ArmorData->GetName());
         }
-        
+
         // Set any attribute modifiers that should be applied when the armor is equipped.
         AttributeModifier = Info.AttributeModifier;
 

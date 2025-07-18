@@ -44,13 +44,13 @@ struct FPickupActorInfo
     /** Timed attribute set modifiers (buffs/debuffs) applied on pickup. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
     TArray<FTimedAttributeSetModifier> OnPickupBuff;
-    
+
     /* === Item & Cleanup === */
 
     /** Should the pickup actor destroy itself after granting items/effects. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
     FText ItemName;
-    
+
     /** Should the pickup actor destroy itself after granting items/effects. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Items")
     bool bDestroyAfterGathering;

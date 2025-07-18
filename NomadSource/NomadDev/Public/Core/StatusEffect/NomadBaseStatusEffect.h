@@ -38,7 +38,7 @@ enum class EEffectLifecycleState : uint8
  * UNomadBaseStatusEffect
  * ----------------------
  * Abstract base class for all Nomad status effects.
- * 
+ *
  * Key Features:
  * - Data-driven: All configuration comes from config assets
  * - Integration: Extends ACF with Nomad-specific functionality
@@ -47,7 +47,7 @@ enum class EEffectLifecycleState : uint8
  * - Categorization: Effects can be categorized for UI and filtering
  * - Lifecycle Management: Proper initialization and cleanup
  * - Blocking Tags: Can block certain actions (like sprinting)
- * 
+ *
  * Design Philosophy:
  * - Effects are data-driven via config assets
  * - No UI logic in effects themselves (handled by manager)
@@ -182,7 +182,7 @@ public:
 
     /** Syncs movement speed modifiers but does not apply new modifiers.
      * Use this method after modifying movement speed attributes externally.
-     * 
+     *
      * Previous Approach: Hardcoded RPG.Attributes.MovementSpeed
      * Current Approach: Config-driven gameplay tag approach.
      */
@@ -243,9 +243,9 @@ protected:
      * - StatModification: applies stat mods only
      * - DamageEvent: applies via UE damage pipeline
      * - Both: applies both stat mods and damage events
-     * 
+     *
      * Override in derived classes for specific implementation.
-     * 
+     *
      * @param InStatMods Array of stat modifications to apply
      * @param InTarget Target actor to apply effects to
      * @param InEffectConfig Config object containing application settings

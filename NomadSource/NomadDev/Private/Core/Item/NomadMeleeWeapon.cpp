@@ -23,13 +23,13 @@ void ANomadMeleeWeapon::InitializeItem()
 {
     // Ensure that the MeleeWeaponData asset is assigned. If not, log an error.
     ensureMsgf(MeleeWeaponData, TEXT("Melee Weapon Data IS NOT SET!"));
-    
+
     // Proceed only if the MeleeWeaponData is valid.
     if (MeleeWeaponData)
     {
         // Retrieve the melee weapon information structure for easier access.
         const FMeleeWeaponInfo& Info = MeleeWeaponData->MeleeWeaponInfo;
-        
+
         // ---------------------------
         // Mesh Setup
         // ---------------------------
@@ -130,7 +130,7 @@ void ANomadMeleeWeapon::InitializeItem()
             // Log a warning if the moveset actions tag is invalid.
             UE_LOG(LogNomadMeleeWeapon, Warning, TEXT("Invalid Moveset Actions Overlay for weapon: %s"), *MeleeWeaponData->GetName());
         }
-        
+
         // ---------------------------
         // Socket Names
         // ---------------------------

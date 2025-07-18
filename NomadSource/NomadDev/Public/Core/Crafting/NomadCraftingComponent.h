@@ -8,7 +8,8 @@
 #include "NomadCraftingComponent.generated.h"
 
 /**
- * 
+ * Nomad crafting component
+ * Extends ACF crafting functionality with data asset initialization
  */
 UCLASS()
 class NOMADDEV_API UNomadCraftingComponent : public UACFCraftingComponent

@@ -91,15 +91,15 @@ public:
 
     /**
      * Apply a movement speed effect through the status effect system.
-     * 
+     *
      * RECOMMENDED APPROACH: Use existing status effect types with proper config assets:
      * - UNomadInfiniteStatusEffect: For permanent movement changes
-     * - UNomadTimedStatusEffect: For temporary movement changes  
+     * - UNomadTimedStatusEffect: For temporary movement changes
      * - UNomadSurvivalStatusEffect: For survival-related movement effects
-     * 
+     *
      * Configure movement speed via config asset's PersistentAttributeModifier.
      * Configure input blocking via config asset's BlockingTags.
-     * 
+     *
      * @param Character The character to apply the effect to.
      * @param StatusEffectClass The status effect class (should have PersistentAttributeModifier configured).
      * @param Duration Duration of the effect (0 for infinite).
@@ -112,7 +112,7 @@ public:
 
     /**
      * Remove a movement speed effect by its gameplay tag.
-     * 
+     *
      * @param Character The character to remove the effect from.
      * @param EffectTag The gameplay tag of the effect to remove.
      */
@@ -124,7 +124,7 @@ public:
     /**
      * Utility method to check if any movement speed effects are currently active.
      * This can be used by UI systems to show movement status indicators.
-     * 
+     *
      * @param Character The character to check.
      * @return true if any movement speed effects are active; false otherwise.
      */
@@ -134,7 +134,7 @@ public:
     /**
      * Gets all active movement speed effect tags on the character.
      * Useful for debugging and UI display of current movement modifiers.
-     * 
+     *
      * @param Character The character to check.
      * @return Array of gameplay tags for active movement speed effects.
      */
@@ -144,7 +144,7 @@ public:
     /**
      * Helper method to apply standard survival movement penalty.
      * This replaces hardcoded movement slowing with a data-driven status effect approach.
-     * 
+     *
      * @param Character The character to apply the penalty to.
      * @param PenaltyLevel Severity of the penalty (Mild, Heavy, Severe).
      */
@@ -155,7 +155,7 @@ public:
 
     /**
      * Helper method to remove survival movement penalties.
-     * 
+     *
      * @param Character The character to remove penalties from.
      */
     UFUNCTION(BlueprintCallable, Category="Nomad|Survival")
@@ -165,10 +165,10 @@ private:
     /**
      * Returns configurable movement speed effect tags.
      * This replaces hardcoded tags with a data-driven approach.
-     * 
+     *
      * In the future, this could be moved to:
      * - A data asset (UNomadMovementSpeedTagsConfig)
-     * - Game settings (UNomadGameplaySettings) 
+     * - Game settings (UNomadGameplaySettings)
      * - Project settings (UNomadDeveloperSettings)
      */
     static TArray<FGameplayTag> GetConfigurableMovementSpeedEffectTags();

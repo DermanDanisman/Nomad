@@ -15,42 +15,42 @@ UNomadAfflictionComponent::UNomadAfflictionComponent()
 {
     // UI-only component: no ticking required
     PrimaryComponentTick.bCanEverTick = false;
-    
+
     // Never replicated: UI state is local to each client
     SetIsReplicatedByDefault(false);
-    
+
     // Initialize configuration
     bAutoSyncOnBeginPlay = true;
     bShowNeutralNotifications = true;
-    
+
     // Initialize arrays
     ActiveAfflictions.Empty();
     EffectConfigs.Empty();
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[AFFLICTION] Component constructed"));
 }
 
 void UNomadAfflictionComponent::BeginPlay()
 {
     Super::BeginPlay();
-    
+
     // Cache reference to status effect manager
     if (AActor* Owner = GetOwner())
     {
         StatusEffectManager = Owner->FindComponentByClass<UNomadStatusEffectManagerComponent>();
         if (!StatusEffectManager)
         {
-            UE_LOG_AFFLICTION(Warning, TEXT("[AFFLICTION] No status effect manager found on %s"), 
+            UE_LOG_AFFLICTION(Warning, TEXT("[AFFLICTION] No status effect manager found on %s"),
                               *Owner->GetName());
         }
     }
-    
+
     // Auto-sync with manager if enabled
     if (bAutoSyncOnBeginPlay)
     {
         SyncWithStatusEffectManager();
     }
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[AFFLICTION] Component initialized"));
 }
 
@@ -62,9 +62,9 @@ void UNomadAfflictionComponent::OnActiveEffectsChanged()
 {
     // This is the function that was missing from the original implementation!
     // Called by the status effect manager when effects are added/removed/changed
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[AFFLICTION] Active effects changed, syncing UI state"));
-    
+
     // Re-sync our UI state with the manager
     SyncWithStatusEffectManager();
 }
@@ -72,19 +72,19 @@ void UNomadAfflictionComponent::OnActiveEffectsChanged()
 void UNomadAfflictionComponent::SyncWithStatusEffectManager()
 {
     // Sync our UI state with the authoritative status effect manager
-    
+
     if (!StatusEffectManager)
     {
         UE_LOG_AFFLICTION(Warning, TEXT("[AFFLICTION] Cannot sync - no status effect manager"));
         return;
     }
-    
+
     // Get current active effects from manager
     const TArray<FActiveEffect> ManagerEffects = StatusEffectManager->GetActiveEffects();
-    
+
     // Clear our current state
     ActiveAfflictions.Empty();
-    
+
     // Rebuild from manager state
     for (const FActiveEffect& Effect : ManagerEffects)
     {
@@ -96,7 +96,7 @@ void UNomadAfflictionComponent::SyncWithStatusEffectManager()
             Context.NotificationType = ENomadAfflictionNotificationType::Applied; // Default for sync
             Context.PreviousStacks = 0;
             Context.NewStacks = Effect.StackCount;
-            
+
             // Get display data from config
             GetAfflictionNotificationData(
                 Effect.Tag,
@@ -107,17 +107,17 @@ void UNomadAfflictionComponent::SyncWithStatusEffectManager()
                 Context.NotificationDuration,
                 Context.NotificationIcon
             );
-            
+
             // Enhance with manager data (type, category, etc.)
             EnhanceContextWithManagerData(Context);
-            
+
             ActiveAfflictions.Add(Context);
         }
     }
-    
+
     // Broadcast updated state
     BroadcastStateChanges();
-    
+
     UE_LOG_AFFLICTION(Log, TEXT("[AFFLICTION] Synced %d effects from manager"), ActiveAfflictions.Num());
 }
 
@@ -137,15 +137,15 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
         UE_LOG_AFFLICTION(Warning, TEXT("[AFFLICTION] Cannot update with invalid tag"));
         return;
     }
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[AFFLICTION] Updating %s: %s (stacks %d->%d)"),
                       *AfflictionTag.ToString(),
                       *StaticEnum<ENomadAfflictionNotificationType>()->GetNameStringByValue((int64)NotificationType),
                       PreviousStacks, NewStacks);
-    
+
     // Find existing affliction
     const int32 Index = FindAfflictionIndex(AfflictionTag);
-    
+
     // Create notification context
     FNomadAfflictionNotificationContext Context;
     Context.AfflictionTag = AfflictionTag;
@@ -153,7 +153,7 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
     Context.PreviousStacks = PreviousStacks;
     Context.NewStacks = NewStacks;
     Context.Reason = Reason;
-    
+
     // Get display data from config
     GetAfflictionNotificationData(
         AfflictionTag,
@@ -164,10 +164,10 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
         Context.NotificationDuration,
         Context.NotificationIcon
     );
-    
+
     // Enhance with manager data
     EnhanceContextWithManagerData(Context);
-    
+
     // Handle different notification types
     switch (NotificationType)
     {
@@ -183,7 +183,7 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
                 }
                 break;
             }
-            
+
         case ENomadAfflictionNotificationType::Stacked:
             {
                 if (Index != INDEX_NONE)
@@ -197,7 +197,7 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
                 }
                 break;
             }
-            
+
         case ENomadAfflictionNotificationType::Unstacked:
             {
                 if (Index != INDEX_NONE)
@@ -216,7 +216,7 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
                 }
                 break;
             }
-            
+
         case ENomadAfflictionNotificationType::Removed:
             {
                 if (Index != INDEX_NONE)
@@ -225,7 +225,7 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
                 }
                 break;
             }
-            
+
         case ENomadAfflictionNotificationType::Refreshed:
             {
                 if (Index != INDEX_NONE)
@@ -234,7 +234,7 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
                 }
                 break;
             }
-            
+
         default:
             {
                 // Handle other types (custom, etc.)
@@ -249,13 +249,13 @@ void UNomadAfflictionComponent::UpdateAfflictionArray(
                 break;
             }
     }
-    
+
     // Broadcast notification (for popups/toasts)
     if (bShowNeutralNotifications || Context.Category != ENomadStatusCategory::Neutral)
     {
         OnAfflictionNotification.Broadcast(Context);
     }
-    
+
     // Broadcast state change (for status bars)
     BroadcastStateChanges();
 }
@@ -292,19 +292,19 @@ TArray<FNomadAfflictionUIInfo> UNomadAfflictionComponent::GetAfflictionUIInfoArr
 {
     TArray<FNomadAfflictionUIInfo> Result;
     Result.Reserve(ActiveAfflictions.Num());
-    
+
     for (const FNomadAfflictionNotificationContext& Context : ActiveAfflictions)
     {
         Result.Add(CreateUIInfoFromContext(Context));
     }
-    
+
     return Result;
 }
 
 TArray<FNomadAfflictionUIInfo> UNomadAfflictionComponent::GetAfflictionsByCategory(ENomadStatusCategory Category) const
 {
     TArray<FNomadAfflictionUIInfo> Result;
-    
+
     for (const FNomadAfflictionNotificationContext& Context : ActiveAfflictions)
     {
         if (Context.Category == Category)
@@ -312,14 +312,14 @@ TArray<FNomadAfflictionUIInfo> UNomadAfflictionComponent::GetAfflictionsByCatego
             Result.Add(CreateUIInfoFromContext(Context));
         }
     }
-    
+
     return Result;
 }
 
 TArray<FNomadAfflictionUIInfo> UNomadAfflictionComponent::GetAfflictionsByType(EStatusEffectType EffectType) const
 {
     TArray<FNomadAfflictionUIInfo> Result;
-    
+
     for (const FNomadAfflictionNotificationContext& Context : ActiveAfflictions)
     {
         if (Context.EffectType == EffectType)
@@ -327,7 +327,7 @@ TArray<FNomadAfflictionUIInfo> UNomadAfflictionComponent::GetAfflictionsByType(E
             Result.Add(CreateUIInfoFromContext(Context));
         }
     }
-    
+
     return Result;
 }
 
@@ -370,7 +370,7 @@ void UNomadAfflictionComponent::GetAfflictionNotificationData(
 {
     // Look up config for this tag
     const UNomadStatusEffectConfigBase* Config = GetStatusEffectConfigForTag(AfflictionTag);
-    
+
     if (Config)
     {
         // Use rich data from config asset
@@ -378,7 +378,7 @@ void UNomadAfflictionComponent::GetAfflictionNotificationData(
         OutColor = Config->GetNotificationColor();
         OutDuration = Config->GetNotificationDuration();
         OutIcon = Config->GetNotificationIcon();
-        
+
         // Get appropriate message based on notification type
         const bool bIsApplication = (NotificationType == ENomadAfflictionNotificationType::Applied ||
                                     NotificationType == ENomadAfflictionNotificationType::Stacked ||
@@ -392,7 +392,7 @@ void UNomadAfflictionComponent::GetAfflictionNotificationData(
         OutColor = FLinearColor::Red;
         OutDuration = 4.0f;
         OutIcon = nullptr;
-        
+
         // Generate basic message
         switch (NotificationType)
         {
@@ -450,14 +450,14 @@ FNomadAfflictionUIInfo UNomadAfflictionComponent::CreateUIInfoFromContext(const 
     Info.DisplayName = Context.DisplayName;
     Info.Category = Context.Category;
     Info.EffectType = Context.EffectType;
-    
+
     // Get additional info from manager if available
     if (StatusEffectManager)
     {
         Info.MaxStacks = StatusEffectManager->GetStatusEffectMaxStacks(Context.AfflictionTag);
         // Note: bCanBeManuallyRemoved would need to be added to the manager's query system
     }
-    
+
     return Info;
 }
 
@@ -466,7 +466,7 @@ void UNomadAfflictionComponent::BroadcastStateChanges()
     // Broadcast complete state
     const TArray<FNomadAfflictionUIInfo> UIInfo = GetAfflictionUIInfoArray();
     OnAfflictionStateChanged.Broadcast(UIInfo);
-    
+
     // Broadcast category-specific updates
     for (int32 CategoryInt = 0; CategoryInt < (int32)ENomadStatusCategory::Neutral + 1; CategoryInt++)
     {
@@ -482,7 +482,7 @@ void UNomadAfflictionComponent::EnhanceContextWithManagerData(FNomadAfflictionNo
     if (StatusEffectManager)
     {
         Context.EffectType = StatusEffectManager->GetStatusEffectType(Context.AfflictionTag);
-        
+
         // Get category from config or fall back to manager
         const UNomadStatusEffectConfigBase* Config = GetStatusEffectConfigForTag(Context.AfflictionTag);
         if (Config)

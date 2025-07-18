@@ -44,7 +44,7 @@ ABaseGatherableActor::ABaseGatherableActor()
 void ABaseGatherableActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-    
+
     // Replicate the current mesh and other properties so they can sync across clients
     DOREPLIFETIME(ABaseGatherableActor, CurrentMesh);
     DOREPLIFETIME_CONDITION_NOTIFY(ABaseGatherableActor, ControlRotationForwardVector, COND_None, REPNOTIFY_Always);
@@ -54,7 +54,7 @@ void ABaseGatherableActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 void ABaseGatherableActor::OnConstruction(const FTransform& Transform)
 {
     Super::OnConstruction(Transform);
-    
+
     // Check if GatherableItemData is valid
     if (!GatherableItemData)
     {
@@ -78,7 +78,7 @@ void ABaseGatherableActor::OnConstruction(const FTransform& Transform)
 void ABaseGatherableActor::BeginPlay()
 {
     Super::BeginPlay();
-    
+
     // Ensure GatherableItemData is set before proceeding
     if (!GatherableItemData)
     {
@@ -101,7 +101,7 @@ void ABaseGatherableActor::BeginPlay()
 void ABaseGatherableActor::StartGather()
 {
     if (bGatherableActorDepleted) return;
-    
+
     // If not the server, forward the call to the server to update health
     if (!HasAuthority())
     {
@@ -111,7 +111,7 @@ void ABaseGatherableActor::StartGather()
     if (!GatherableItemData) return;
 
     const FGatherableActorInfo& Info = GatherableItemData->GatherableActorInfo;
-    
+
     // Decrease health by the damage per hit (e.g., the player hits the resource)
     CurrentHealth = FMath::Max(CurrentHealth - Info.GetDamagePerHit(), 0);
 
@@ -119,7 +119,7 @@ void ABaseGatherableActor::StartGather()
     UE_LOG(LogTemp, Log, TEXT("%s: Hit! Health=%d"), *GetName(), CurrentHealth);
 
     // Update the mesh based on the current health of the resource
-    ChangeMeshesWhileGathering(); 
+    ChangeMeshesWhileGathering();
 }
 
 void ABaseGatherableActor::ServerStartGather_Implementation()
@@ -128,7 +128,7 @@ void ABaseGatherableActor::ServerStartGather_Implementation()
     if (!GatherableItemData) return;
 
     const FGatherableActorInfo& Info = GatherableItemData->GatherableActorInfo;
-    
+
     // Decrease health on the server
     CurrentHealth = FMath::Max(CurrentHealth - Info.GetDamagePerHit(), 0);
 
@@ -152,14 +152,14 @@ void ABaseGatherableActor::ChangeMeshesWhileGathering()
 
     // Calculate health percentage based on the current health
     const int32 HealthPercentage = (CurrentHealth * 100) / Info.GetMaxHealth();
-    
+
     // If the health reaches 0, change the mesh to the gathered (depleted) state
     if (HealthPercentage <= 0.f)
     {
         CurrentMesh = Info.GetGatheredMesh(); // Set the mesh to the depleted state (e.g., an empty bush)
         bGatherableActorDepleted = true; // Mark as depleted (no more gathering possible)
         OnGatherComplete(); // Complete the gathering process
-    } 
+    }
     else
     {
         // Otherwise, update the mesh based on the health percentage
@@ -204,7 +204,7 @@ void ABaseGatherableActor::OnInteractedByPawn_Implementation(class APawn* Pawn, 
     // If no data or the actor is already depleted, exit
     if (!GatherableItemData) return;
     const FGatherableActorInfo& Info = GatherableItemData->GatherableActorInfo;
-    
+
     if (Pawn && !bGatherableActorDepleted && Info.IsPickupItem())
     {
         UACFEquipmentComponent* EquipComp = Pawn->FindComponentByClass<UACFEquipmentComponent>();
@@ -219,7 +219,7 @@ void ABaseGatherableActor::OnInteractedByPawn_Implementation(class APawn* Pawn, 
                     StorageComponent->MoveItemsToInventory({ FBaseItem(Entry.ResourceItem.ItemClass, Entry.ResourceItem.Count) }, EquipComp);
                 }
             }
-            
+
             // Gather currency (if applicable) for the interaction
             StorageComponent->GatherCurrency(StorageComponent->GetCurrentCurrencyAmount(), StorageComponent->GetPawnCurrencyComponent(Pawn));
             bGatherableActorDepleted = true; // Mark the actor as depleted after gathering
@@ -271,7 +271,7 @@ void ABaseGatherableActor::OnGatherComplete()
         // If no next stage, spawn loot
         SpawnGatheredLoot();
     }
-    
+
     // Mark the health as 0 after gathering is complete
     CurrentHealth = 0;
     HandlePostGather(); // Finalize the mesh update

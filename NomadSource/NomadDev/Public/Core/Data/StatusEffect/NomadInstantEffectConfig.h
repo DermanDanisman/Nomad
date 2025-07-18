@@ -13,14 +13,14 @@ class UNomadBaseStatusEffect;
  * UNomadInstantEffectConfig
  * -------------------------
  * Configuration for instant (one-shot) status effects.
- * 
+ *
  * Key Features:
  * - Apply immediately and end
  * - No duration or persistence
  * - Supports chain effects
  * - Full hybrid system integration
  * - Optimized for quick application
- * 
+ *
  * Use Cases:
  * - Healing potions
  * - Damage spells
@@ -56,13 +56,13 @@ public:
 
     /** Main stat modifications to apply instantly */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="Immediate stat changes when effect is applied"))
     TArray<FStatisticValue> OnApplyStatModifications;
 
     /** Temporary attribute modifier (applied and immediately removed) */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="Brief attribute changes for calculation purposes"))
     FAttributesSetModifier TemporaryAttributeModifier;
 
@@ -119,9 +119,9 @@ public:
     virtual TArray<FString> GetValidationErrors() const override;
 
     /** Returns effect type description */
-    virtual FText GetEffectTypeDescription() const override 
-    { 
-        return FText::FromString(TEXT("Instant Effect")); 
+    virtual FText GetEffectTypeDescription() const override
+    {
+        return FText::FromString(TEXT("Instant Effect"));
     }
 
     /** Get effect magnitude for UI display */

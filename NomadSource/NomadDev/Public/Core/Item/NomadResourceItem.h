@@ -59,7 +59,7 @@ protected:
     // Mesh component representing the visual model of the crafting material.
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
-    
+
     // Gameplay tag representing the material type (e.g., "Item.Material.Metal.Iron").
     UPROPERTY(EditDefaultsOnly, Category = "Crafting")
     FGameplayTag MaterialType;

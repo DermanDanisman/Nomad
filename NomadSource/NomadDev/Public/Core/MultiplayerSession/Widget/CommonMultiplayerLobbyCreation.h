@@ -12,7 +12,7 @@ class UMultiplayerSessionsSubsystem;
 class UCommonButtonBase;
 
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API UCommonMultiplayerLobbyCreation : public UCommonActivatableWidget {

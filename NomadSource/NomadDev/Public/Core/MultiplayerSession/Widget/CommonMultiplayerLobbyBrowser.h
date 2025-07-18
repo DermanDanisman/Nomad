@@ -1,9 +1,9 @@
 // -----------------------------------------------------------------------------
 // UCommonMultiplayerLobbyBrowser.h
 //
-// This widget displays a lobby browser UI that allows players to search for 
-// available multiplayer sessions. It uses the MultiplayerSessionsSubsystem to 
-// perform the session search and then passes the results to Blueprints via an 
+// This widget displays a lobby browser UI that allows players to search for
+// available multiplayer sessions. It uses the MultiplayerSessionsSubsystem to
+// perform the session search and then passes the results to Blueprints via an
 // event (FindSessionResultCompleted).
 // -----------------------------------------------------------------------------
 
@@ -16,12 +16,12 @@
 #include "FindSessionsCallbackProxy.h"           // For FBlueprintSessionResult and session search results
 #include "CommonMultiplayerLobbyBrowser.generated.h"
 
-// Forward Declaration 
+// Forward Declaration
 class UMultiplayerSessionsSubsystem;
 class UButton;
 class UCommonButtonBase;
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API UCommonMultiplayerLobbyBrowser : public UCommonActivatableWidget {
@@ -51,7 +51,7 @@ protected:
     // Called once when the widget is constructed. Bind button click events here.
     virtual bool Initialize() override;
     // NativeDestruct:
-    // Called when the widget is about to be destroyed. Unbind delegates to avoid 
+    // Called when the widget is about to be destroyed. Unbind delegates to avoid
     // callbacks to a destroyed widget.
     virtual void NativeDestruct() override;
 

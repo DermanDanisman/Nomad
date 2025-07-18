@@ -14,7 +14,7 @@
 EDGE CASES & ROBUSTNESS NOTES
 ===============================================================================
 Last Updated: 2025-07-17 by DermanDanisman
-Recent Updates: Consolidated status effect system, renamed confusing functions, 
+Recent Updates: Consolidated status effect system, renamed confusing functions,
                 added proper survival status effects with data-driven configuration
 
 1. Stat Clamping:
@@ -148,7 +148,7 @@ enum class ESurvivalSeverity : uint8
 {
     None        UMETA(DisplayName = "None"),
     Mild        UMETA(DisplayName = "Mild"),        // Early warning stage
-    Heavy       UMETA(DisplayName = "Heavy"),       // Moderate penalty stage  
+    Heavy       UMETA(DisplayName = "Heavy"),       // Moderate penalty stage
     Severe      UMETA(DisplayName = "Severe"),      // Critical stage with major penalties
     Extreme     UMETA(DisplayName = "Extreme")      // Life-threatening stage
 };
@@ -224,7 +224,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnSurvivalNotification, FString,
  * All tuning variables are now sourced from the DataAsset (SurvivalConfig).
  * All cooldowns and warning thresholds are now configurable via DataAsset.
  * All time-based logic uses UDS-provided in-game time for synchrony.
- * 
+ *
  * NEW (2025-07-17): Dual status effect system with data-driven survival effects
  */
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -240,15 +240,15 @@ public:
 
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
-    /** 
+    /**
      * Current overall survival state (replicated to clients for UI).
      * Automatically calculated based on most severe condition affecting the player.
      * Priority: Heatstroke > Hypothermic > Starving > Dehydrated > Hungry > Thirsty > Normal
      */
     UPROPERTY(Replicated, BlueprintReadOnly, Category="Survival|Status")
     ESurvivalState CurrentSurvivalState = ESurvivalState::Normal;
-    
-    /** 
+
+    /**
      * Most recent external temperature received at player's location (replicated for client UI).
      * Updated every OnMinuteTick() based on player's specific world position.
      * Units determined by TemperatureUnit setting (Celsius/Fahrenheit).
@@ -256,7 +256,7 @@ public:
     UPROPERTY(Replicated, BlueprintReadOnly, Category="Survival|Temperature")
     float LastExternalTemperature = 0.f;
 
-    /** 
+    /**
      * Cached normalized temperature value [0..1] for UI display (replicated).
      * 0 = coldest possible temperature, 1 = hottest possible temperature.
      * Automatically calculated from LastExternalTemperature using config ranges.
@@ -264,22 +264,22 @@ public:
     UPROPERTY(Replicated, BlueprintReadOnly, Category="Survival|Temperature")
     float LastTemperatureNormalized = 0.f;
 
-    /** 
+    /**
      * C++ wrapper function that calls the Blueprint implementable event.
      * Allows Blueprint classes to define custom location-based temperature logic.
      * Used for per-player temperature sampling instead of global weather values.
      */
     UFUNCTION(BlueprintCallable, Category = "Survival|Temperature")
     float GetTemperatureAtPlayerLocation() const;
-    
-    /** 
+
+    /**
      * Blueprint implementable event for location-based temperature sampling.
      * Override in Blueprint to implement custom logic for getting temperature at player's position.
      * Should query UDS/weather system using player's world location and return temperature value.
      */
     UFUNCTION(BlueprintImplementableEvent, Category = "Survival|Temperature")
     float BP_GetTemperatureAtPlayerLocation() const;
-    
+
     // ======== Main Simulation Tick ========
 
     /**
@@ -304,13 +304,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Survival|Temperature")
     void SetTemperatureUnit(const ETemperatureUnit InUnit) { TemperatureUnit = InUnit; }
 
-    /** 
+    /**
      * Returns the last normalized environmental temperature [0..1].
      * 0 = coldest possible, 1 = hottest possible (for UI bars, hazard logic, etc).
      */
     UFUNCTION(BlueprintPure, Category="Survival|Temperature")
     float GetTemperatureNormalized(float InExternalTemperature) const;
-    
+
     /** Returns normalized temperature [0..1] for advanced curve input (NOT for UI bars). */
     float GetNormalizedTemperatureForCurve(float InExternalTemperature) const;
 
@@ -342,13 +342,13 @@ public:
 
     /** Broadcasts when current hunger/thirst decay is computed (for UI/analytics). */
     // --- Delegates (BlueprintAssignable for BP binding) ---
-    
+
     UPROPERTY(BlueprintAssignable, Category = "Survival|Events")
     FOnDecaysComputed OnDecaysComputed;
 
     UPROPERTY(BlueprintAssignable, Category = "Survival|Events")
     FOnStarvationWarning OnStarvationWarning;
-    
+
     UPROPERTY(BlueprintAssignable, Category = "Survival|Events")
     FOnStarvationStarted OnStarvationStarted;
 
@@ -357,7 +357,7 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Survival|Events")
     FOnDehydrationWarning OnDehydrationWarning;
-    
+
     UPROPERTY(BlueprintAssignable, Category = "Survival|Events")
     FOnDehydrationStarted OnDehydrationStarted;
 
@@ -427,7 +427,7 @@ protected:
 
 private:
     // ======== Constants ========
-    
+
     static constexpr float MINUTES_PER_DAY = 24.f * 60.f;
     static constexpr float TEMPERATURE_VALIDATION_MIN = -100.f;
     static constexpr float TEMPERATURE_VALIDATION_MAX = 100.f;
@@ -442,7 +442,7 @@ private:
     UPROPERTY()
     TObjectPtr<UNomadStatusEffectManagerComponent> StatusEffectManagerComponent = nullptr;
 
-    /** 
+    /**
      * Data Asset holding all tunable survival parameters.
      * Designers assign this in the editor (see UNomadSurvivalNeedsData).
      */
@@ -477,7 +477,7 @@ private:
     int32 ColdExposureCounter = 0;
 
     // ======== Cooldown Timers ========
-    
+
     /** Last in-game time (minutes since midnight) a starvation warning was fired. */
     float LastStarvationWarningTime;
 
@@ -517,7 +517,7 @@ private:
     int32 HypothermiaWarningCount = 0;
 
     // ======== Cached Values Struct ========
-    
+
     /** Structure for caching frequently accessed stat values */
     struct FCachedStatValues
     {
@@ -526,7 +526,7 @@ private:
         float BodyTemp = 0.f;
         float Endurance = 0.f;
         bool bValid = false;
-        
+
         FCachedStatValues() = default;
     };
 
@@ -539,7 +539,7 @@ private:
     FCachedStatValues GetCachedStatValues() const;
 
     // ======== Core Simulation Helpers ========
-    
+
     /**
      * Normalizes the given temperature to [0,1] using climate config.
      * @param InRawTemperature   The temperature reading from weather/UDS.
@@ -547,9 +547,9 @@ private:
      * @return Value in [0,1] for use in all modifiers/hazards.
      */
     float ComputeNormalizedTemperature(float InRawTemperature, bool bIsWarmBar) const;
-    
+
     // ======== Advanced Curve-Driven Modifiers ========
-    
+
     /**
      * Calculates extra hunger decay modifier due to cold temperature.
      * @param NormalizedTempForCurve  Pre-calculated normalized temperature for curve input.
@@ -611,7 +611,7 @@ private:
      * @param CachedValues  Pre-calculated stat values.
      */
     void UpdateBodyTemperature(float AmbientTempCelsius, const FCachedStatValues& CachedValues);
-    
+
     /**
      * Evaluates and updates player's overall survival state for UI using cached values.
      * RENAMED FROM: EvaluateAndUpdateSurvivalState (clearer naming - this is UI-only).

@@ -16,7 +16,7 @@ void ANomadProjectile::BeginPlay()
 {
     // Call the base class BeginPlay to perform any inherited initialization.
     Super::BeginPlay();
-    
+
     // Initialize the projectile properties from the data asset at runtime.
     InitializeItem();
 }
@@ -26,7 +26,7 @@ void ANomadProjectile::InitializeItem()
 {
     // Ensure that the ProjectileData asset is set. If not, log an error.
     ensureMsgf(ProjectileData, TEXT("Projectile Data IS NOT SET!"));
-    
+
     // Only proceed if the ProjectileData asset is valid.
     if (ProjectileData)
     {
@@ -46,7 +46,7 @@ void ANomadProjectile::InitializeItem()
             // Log a warning if no static mesh is assigned.
             UE_LOG(LogNomadProjectile, Warning, TEXT("No Static Mesh assigned for projectile: %s"), *ProjectileData->GetName());
         }
-        
+
         // ---------------------------
         // Projectile Movement Settings
         // ---------------------------

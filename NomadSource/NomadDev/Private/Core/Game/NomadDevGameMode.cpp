@@ -39,16 +39,16 @@ void ANomadDevGameMode::GetSeamlessTravelActorList(bool bToTransition, TArray<AA
 void ANomadDevGameMode::HandleSeamlessTravelPlayer(AController*& C)
 {
     Super::HandleSeamlessTravelPlayer(C);
-    
+
     if (ANomadPlayerController* NC = Cast<ANomadPlayerController>(C))
     {
         if (GEngine)
         {
-            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, 
-                FString::Printf(TEXT("HandleSeamlessTravelPlayer called for: %s"), 
+            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow,
+                FString::Printf(TEXT("HandleSeamlessTravelPlayer called for: %s"),
                 NC ? *NC->GetName() : TEXT("NULL")));
         }
-        
+
         GetWorldTimerManager().SetTimer(
         DelayedCustomizationHandle,
         [this, NC]()

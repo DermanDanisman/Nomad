@@ -65,7 +65,7 @@ void ANomadAccessory::InitializeItem()
             // Log a warning if no gather sound is provided.
             UE_LOG(LogNomadAccessory, Warning, TEXT("No GatherSound assigned for Accessory: %s"), *AccessoryData->GetName());
         }
-        
+
         // ---------------------------
         // Attribute & Gameplay Logic
         // ---------------------------
@@ -79,10 +79,10 @@ void ANomadAccessory::InitializeItem()
             // Log a warning if the primary attribute requirements array is empty.
             UE_LOG(LogNomadAccessory, Warning, TEXT("PrimaryAttributesRequirement is empty for Accessory: %s"), *AccessoryData->GetName());
         }
-        
+
         // Copy the attribute modifier from the data asset.
         AttributeModifier = Info.AttributeModifier;
-        
+
         // If a gameplay modifier is defined, assign it.
         if (Info.GameplayModifier)
         {

@@ -51,7 +51,7 @@ protected:
     /** Radius over which radial impulse is applied. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Physics|Impulse", meta=(EditCondition="bApplyRadialImpulse"))
     float RadialImpulseRadius = 300.0f;
-    
+
 private:
     /** Handle to clear the physics timer if needed. */
     FTimerHandle StopPhysicsTimerHandle;

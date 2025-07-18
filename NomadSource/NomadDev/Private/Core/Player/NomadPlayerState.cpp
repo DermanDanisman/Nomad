@@ -14,7 +14,7 @@ ANomadPlayerState::ANomadPlayerState()
 void ANomadPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-    
+
     // Register our CustomizationState for replication
     DOREPLIFETIME_CONDITION_NOTIFY(ANomadPlayerState, CustomizationState, COND_None, REPNOTIFY_Always);
 }

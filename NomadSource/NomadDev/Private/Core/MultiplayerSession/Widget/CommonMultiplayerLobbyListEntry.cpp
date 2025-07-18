@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // UCommonMultiplayerLobbyListEntry.cpp
 //
-// Implements the functionality for the lobby list entry widget. This widget 
-// binds to the join session delegate, initiates session joining, and manages UI 
+// Implements the functionality for the lobby list entry widget. This widget
+// binds to the join session delegate, initiates session joining, and manages UI
 // feedback for joining a session.
 // -----------------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ void UCommonMultiplayerLobbyListEntry::MenuSetup()
 {
     // -------------------------------------------------------------------------
     // Retrieve the MultiplayerSessionsSubsystem:
-    // Get the subsystem from the GameInstance. This subsystem is responsible for all 
+    // Get the subsystem from the GameInstance. This subsystem is responsible for all
     // session operations (join, find, destroy, etc.).
     // -------------------------------------------------------------------------
     UGameInstance* GameInstance = GetGameInstance();
@@ -30,8 +30,8 @@ void UCommonMultiplayerLobbyListEntry::MenuSetup()
 
     // -------------------------------------------------------------------------
     // Bind Join Session Callback:
-    // Bind the OnJoinSession callback so that when the subsystem completes a join 
-    // attempt, our function is called. To avoid duplicate bindings, ensure that 
+    // Bind the OnJoinSession callback so that when the subsystem completes a join
+    // attempt, our function is called. To avoid duplicate bindings, ensure that
     // MenuSetup is only called once per widget instance.
     // -------------------------------------------------------------------------
     if (MultiplayerSessionsSubsystem)

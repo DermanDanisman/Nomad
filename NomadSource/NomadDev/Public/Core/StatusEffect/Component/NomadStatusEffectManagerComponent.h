@@ -70,7 +70,7 @@ struct NOMADDEV_API FActiveEffect
     float Duration = 0.0f;
 
     // ======== Operators for container support ========
-    
+
     bool operator==(const FActiveEffect& Other) const
     {
         return Tag == Other.Tag;
@@ -90,7 +90,7 @@ struct NOMADDEV_API FActiveEffect
  * UNomadStatusEffectManagerComponent
  * ----------------------------------
  * Enhanced status effect manager that extends ACF with Nomad-specific functionality.
- * 
+ *
  * Key Features:
  * - Smart Removal System: Intelligently removes effects based on their type
  * - Damage Analytics: Tracks damage/healing done by status effects
@@ -99,13 +99,13 @@ struct NOMADDEV_API FActiveEffect
  * - Replication: Efficient replication for multiplayer support
  * - Query System: Rich querying capabilities for effects
  * - UI Integration: Seamless integration with affliction UI components
- * 
+ *
  * Supported Effect Types:
  * - Instant: Apply once and done (healing potions, damage spells)
  * - Timed: Duration-based effects that can stack (poison, buffs)
  * - Infinite: Permanent effects until manually removed (curses, traits)
  * - Survival: Special survival-related effects (hunger, temperature)
- * 
+ *
  * Design Philosophy:
  * - Manager handles all UI notifications and analytics
  * - Effects themselves contain no UI logic
@@ -129,7 +129,7 @@ public:
     //         SMART REMOVAL SYSTEM
     // =====================================================
 
-    /** 
+    /**
      * Intelligently removes a status effect based on its type and configuration.
      * - Timed/Stackable Effects: Removes ALL stacks (like bandage removing all bleeding)
      * - Infinite Effects: Removes completely (like water removing dehydration)
@@ -138,7 +138,7 @@ public:
     UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Smart Removal")
     bool Nomad_RemoveStatusEffectSmart(FGameplayTag StatusEffectTag);
 
-    /** 
+    /**
      * Removes a single stack from stackable effects only.
      * Used for natural decay or weak items that only remove one stack.
      * Non-stackable effects are unaffected.
@@ -146,7 +146,7 @@ public:
     UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Stack Management")
     bool Nomad_RemoveStatusEffectStack(FGameplayTag StatusEffectTag);
 
-    /** 
+    /**
      * Force removes all stacks of any effect type.
      * Use for powerful items or admin commands.
      */
@@ -267,7 +267,7 @@ public:
     /**
      * Applies a timed status effect with the specified duration.
      * The effect will automatically be removed when the duration expires.
-     * 
+     *
      * @param StatusEffectClass The status effect class to apply (must be UNomadTimedStatusEffect or derived)
      * @param Duration Duration in seconds for the effect (must be > 0)
      */
@@ -277,7 +277,7 @@ public:
     /**
      * Applies an infinite status effect that persists until manually removed.
      * The effect will remain active indefinitely until explicitly removed.
-     * 
+     *
      * @param StatusEffectClass The status effect class to apply (must be UNomadInfiniteStatusEffect or derived)
      */
     UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Application")

@@ -11,7 +11,7 @@
 class UPickupItemActorData;
 
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API ANomadWorldItem : public AACFWorldItem, public IGatherableInterface
@@ -39,8 +39,8 @@ public:
     static constexpr float PhysicsWindow = 5.0f;
 
     /*———— Data & Runtime State ————*/
-    /** 
-     * Asset containing all configuration: mesh, tags, tool requirements, 
+    /**
+     * Asset containing all configuration: mesh, tags, tool requirements,
      * loot table, health, gather time, destroy flag.
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gatherable")

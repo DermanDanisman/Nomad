@@ -20,7 +20,7 @@ class UNomadBaseStatusEffect;
  * UNomadInfiniteStatusEffect
  * --------------------------
  * Persistent, data-driven status effect that lasts indefinitely until manually removed.
- * 
+ *
  * Key Features:
  * - Persistent until manually removed (water removes dehydration)
  * - Optional periodic ticking for ongoing effects
@@ -31,14 +31,14 @@ class UNomadBaseStatusEffect;
  * - Chain effect support for activation/deactivation
  * - Full hybrid system integration
  * - Smart removal system support
- * 
+ *
  * Perfect for:
  * - Equipment bonuses that last until unequipped
  * - Permanent curses until cured
  * - Racial traits and class features
  * - Environmental states (well-fed, dehydrated)
  * - Character conditions (diseased, blessed)
- * 
+ *
  * Design Philosophy:
  * - Smart removal: items remove completely (water removes all dehydration)
  * - Stack-aware: all modifications scale with current stack count
@@ -60,7 +60,7 @@ public:
     // =====================================================
     //         STACKING / REFRESH LOGIC
     // =====================================================
-    
+
     /** Called when effect is stacked (gains additional stacks) */
     UFUNCTION(BlueprintNativeEvent, Category="Nomad Infinite Effect | Stacking")
     void OnStacked(int32 NewStackCount);
@@ -110,7 +110,7 @@ public:
     // =====================================================
     //         CONFIGURATION ACCESS
     // =====================================================
-    
+
     /** Loads and returns the config asset, or nullptr if not set/invalid */
     virtual UNomadInfiniteEffectConfig* GetEffectConfig() const override;
 

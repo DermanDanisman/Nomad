@@ -1,9 +1,9 @@
 // -----------------------------------------------------------------------------
 // UCommonMultiplayerLobbyListEntry.h
 //
-// This widget represents a single entry in the lobby list. Each entry displays 
+// This widget represents a single entry in the lobby list. Each entry displays
 // information about a multiplayer session and allows the player to join that session.
-// It uses the Online Session Interface to retrieve connection details and triggers 
+// It uses the Online Session Interface to retrieve connection details and triggers
 // a session join when the Join button is clicked.
 // -----------------------------------------------------------------------------
 
@@ -27,8 +27,8 @@ class NOMADDEV_API UCommonMultiplayerLobbyListEntry : public UCommonUserWidget {
 public:
     /**
      * MenuSetup:
-     * Initializes this lobby list entry. It retrieves the MultiplayerSessionsSubsystem 
-     * and binds the join session callback. Optionally, you might perform additional 
+     * Initializes this lobby list entry. It retrieves the MultiplayerSessionsSubsystem
+     * and binds the join session callback. Optionally, you might perform additional
      * setup here.
      */
     UFUNCTION(BlueprintCallable, Category = "Multiplayer Sessions Subsystem | Lobby List Entry")
@@ -56,7 +56,7 @@ public:
 protected:
     // -------------------------------------------------------------------------
     // Widget Lifecycle:
-    // Initialize is called once when the widget is created; NativeDestruct is called 
+    // Initialize is called once when the widget is created; NativeDestruct is called
     // before the widget is destroyed.
     // -------------------------------------------------------------------------
     virtual bool Initialize() override;

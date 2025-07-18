@@ -19,7 +19,7 @@ struct FMeleeWeaponInfo : public FBaseWeaponInfo
 };
 
 /**
- * 
+ *
  */
 UCLASS(BlueprintType)
 class NOMADDEV_API UMeleeWeaponData : public UDataAsset
@@ -27,7 +27,7 @@ class NOMADDEV_API UMeleeWeaponData : public UDataAsset
     GENERATED_BODY()
 
 public:
-    
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Item Information")
     FMeleeWeaponInfo MeleeWeaponInfo;
 };

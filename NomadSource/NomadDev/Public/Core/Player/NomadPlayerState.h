@@ -8,7 +8,7 @@
 #include "NomadPlayerState.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API ANomadPlayerState : public APlayerState
@@ -33,7 +33,7 @@ public:
      */
     UPROPERTY(VisibleAnywhere,BlueprintReadOnly, Replicated, ReplicatedUsing = OnRep_CustomizationState_PS, SaveGame)
     FMultiplayerPlayerCustomizationState CustomizationState;
-    
+
     /**
      * Called on clients when CustomizationState changes.
      * Drives visual update via CharacterCustomizationInterface.
@@ -54,7 +54,7 @@ public:
      *  Reset is called on seamless travel; clear transient state here if needed.
      */
     virtual void Reset() override;
-    
+
     UFUNCTION(BlueprintCallable)
     void SetCustomizationState(const FMultiplayerPlayerCustomizationState& NewState);
 
@@ -65,5 +65,5 @@ private:
 
     FTimerHandle CustomizationApplyTimerHandle;
     bool bPendingCustomizationApply = false;
-    
+
 };

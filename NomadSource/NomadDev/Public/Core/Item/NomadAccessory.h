@@ -14,7 +14,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogNomadAccessory, Log, All);
 
 /**
  * ANomadAccessory
- * 
+ *
  * Represents an equippable accessory item in the game (such as rings, amulets, or trinkets).
  * Inherits from AACFAccessory and utilizes a data asset (UEquipableItemData) to configure its properties,
  * including sounds, attribute modifiers, and general item information.

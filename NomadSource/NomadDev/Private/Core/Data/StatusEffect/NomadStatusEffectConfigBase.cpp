@@ -84,7 +84,7 @@ FText UNomadStatusEffectConfigBase::GetNotificationMessage(bool bWasAdded) const
     {
         return AppliedMessage;
     }
-    
+
     if (!bWasAdded && !RemovedMessage.IsEmpty())
     {
         return RemovedMessage;
@@ -144,7 +144,7 @@ bool UNomadStatusEffectConfigBase::IsConfigValid() const
                     UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] DamageTypeClass required for DamageEvent/Both modes"));
                     return false;
                 }
-                
+
                 if (DamageStatisticMods.Num() == 0)
                 {
                     UE_LOG_AFFLICTION(Error, TEXT("[CONFIG] DamageStatisticMods required for DamageEvent/Both modes"));
@@ -204,12 +204,12 @@ TArray<FString> UNomadStatusEffectConfigBase::GetValidationErrors() const
                 {
                     Errors.Add(TEXT("DamageTypeClass must be set for DamageEvent or Both modes"));
                 }
-                
+
                 if (DamageStatisticMods.Num() == 0)
                 {
                     Errors.Add(TEXT("DamageStatisticMods must have at least one entry for DamageEvent or Both modes"));
                 }
-                
+
                 // Validate damage stat mods
                 for (int32 i = 0; i < DamageStatisticMods.Num(); i++)
                 {
@@ -249,7 +249,7 @@ void UNomadStatusEffectConfigBase::PostEditChangeProperty(FPropertyChangedEvent&
         if (PropertyName == GET_MEMBER_NAME_CHECKED(UNomadStatusEffectConfigBase, MaxStackSize))
         {
             MaxStackSize = FMath::Max(1, MaxStackSize);
-            
+
             // Auto-enable stacking if max stacks > 1
             if (MaxStackSize > 1)
             {
@@ -332,7 +332,7 @@ EDataValidationResult UNomadStatusEffectConfigBase::IsDataValid(FDataValidationC
 
     if (Result == EDataValidationResult::Valid)
     {
-        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Base config validation passed: %s"), 
+        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Base config validation passed: %s"),
                           *EffectName.ToString());
     }
 

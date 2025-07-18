@@ -34,13 +34,13 @@ void ANomadConsumableItem::InitializeItem()
 {
     // Ensure that the ConsumableItemData asset is assigned; if not, log an error.
     ensureMsgf(ConsumableItemData, TEXT("Consumable Item Data IS NOT SET!"));
-    
+
     // Only proceed if the ConsumableItemData asset is valid.
     if (ConsumableItemData)
     {
         // Retrieve the consumable item info from the data asset for easier access.
         const FConsumableItemInfo& Info = ConsumableItemData->ConsumableItemInfo;
-        
+
         // ---------------------------
         // Mesh Setup
         // ---------------------------
@@ -54,7 +54,7 @@ void ANomadConsumableItem::InitializeItem()
             // Log a warning if no static mesh is provided.
             UE_LOG(LogNomadConsumable, Warning, TEXT("No Static Mesh assigned for Consumable Item: %s"), *ConsumableItemData->GetName());
         }
-        
+
         // ---------------------------
         // Effect Setup
         // ---------------------------

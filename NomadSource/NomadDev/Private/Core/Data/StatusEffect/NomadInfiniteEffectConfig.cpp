@@ -16,40 +16,40 @@ UNomadInfiniteEffectConfig::UNomadInfiniteEffectConfig()
     TickInterval = 5.0f;
     bCanBeManuallyRemoved = true;
     bPersistThroughSaveLoad = true;
-    
+
     // Initialize chain effects
     bTriggerActivationChainEffects = false;
     bTriggerDeactivationChainEffects = false;
     ActivationChainEffects.Empty();
     DeactivationChainEffects.Empty();
-    
+
     // Initialize UI settings
     bShowInfinitySymbolInUI = true;
     bShowTickNotifications = false;
     DisplayPriority = 50;
-    
+
     // Initialize stat modifications
     OnActivationStatModifications.Empty();
     OnTickStatModifications.Empty();
     OnDeactivationStatModifications.Empty();
-    
+
     // Initialize persistent modifier with valid GUID
     PersistentAttributeModifier = FAttributesSetModifier();
     PersistentAttributeModifier.Guid = FGuid::NewGuid();
-    
+
     // Set appropriate defaults for infinite effects
     bCanStack = false;
     MaxStackSize = 1;
     bShowNotifications = true;
     Category = ENomadStatusCategory::Neutral;
-    
+
     // Hybrid system defaults
     ApplicationMode = EStatusEffectApplicationMode::StatModification;
     DamageTypeClass = nullptr;
-    
+
     // Documentation
     DeveloperNotes = TEXT("Infinite duration status effect - persists until manually removed.");
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[CONFIG] Infinite effect config constructed"));
 }
 
@@ -117,7 +117,7 @@ bool UNomadInfiniteEffectConfig::IsConfigValid() const
 TArray<FString> UNomadInfiniteEffectConfig::GetValidationErrors() const
 {
     TArray<FString> Errors;
-    
+
     // Get base validation errors
     Errors.Append(Super::GetValidationErrors());
 
@@ -184,8 +184,8 @@ TArray<FString> UNomadInfiniteEffectConfig::GetValidationErrors() const
 FString UNomadInfiniteEffectConfig::GetEffectDescription() const
 {
     FString LocalDescription = FString::Printf(TEXT("Infinite Effect: %s\n"), *EffectName.ToString());
-    
-    LocalDescription += FString::Printf(TEXT("Category: %s\n"), 
+
+    LocalDescription += FString::Printf(TEXT("Category: %s\n"),
                                   *StaticEnum<ENomadStatusCategory>()->GetNameStringByValue((int64)Category));
 
     if (bHasPeriodicTick)
@@ -197,10 +197,10 @@ FString UNomadInfiniteEffectConfig::GetEffectDescription() const
         LocalDescription += TEXT("No periodic ticking\n");
     }
 
-    LocalDescription += FString::Printf(TEXT("Manual removal: %s\n"), 
+    LocalDescription += FString::Printf(TEXT("Manual removal: %s\n"),
                                   bCanBeManuallyRemoved ? TEXT("Allowed") : TEXT("Restricted"));
 
-    LocalDescription += FString::Printf(TEXT("Persists through save/load: %s\n"), 
+    LocalDescription += FString::Printf(TEXT("Persists through save/load: %s\n"),
                                   bPersistThroughSaveLoad ? TEXT("Yes") : TEXT("No"));
 
     if (bCanStack)
@@ -254,8 +254,8 @@ bool UNomadInfiniteEffectConfig::CanBeRemovedByTag(const FGameplayTag& RemovalTa
 
 int32 UNomadInfiniteEffectConfig::GetTotalStatModificationCount() const
 {
-    return OnActivationStatModifications.Num() + 
-           OnTickStatModifications.Num() + 
+    return OnActivationStatModifications.Num() +
+           OnTickStatModifications.Num() +
            OnDeactivationStatModifications.Num() +
            PersistentAttributeModifier.PrimaryAttributesMod.Num() +
            PersistentAttributeModifier.AttributesMod.Num() +
@@ -360,7 +360,7 @@ EDataValidationResult UNomadInfiniteEffectConfig::IsDataValid(FDataValidationCon
 
     if (Result == EDataValidationResult::Valid)
     {
-        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Infinite effect config validation passed: %s"), 
+        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Infinite effect config validation passed: %s"),
                           *EffectName.ToString());
     }
 

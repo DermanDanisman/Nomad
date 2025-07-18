@@ -14,9 +14,9 @@ UENUM(BlueprintType)
 enum class EFeets : uint8
 {
     LeftFoot,
-    RightFoot, 
-    LeftFoot2, 
-    RightFoot2 
+    RightFoot,
+    LeftFoot2,
+    RightFoot2
 };
 
 // -----------------------------------------------------------------------------

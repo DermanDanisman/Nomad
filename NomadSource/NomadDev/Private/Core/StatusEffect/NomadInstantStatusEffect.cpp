@@ -19,7 +19,7 @@ UNomadInstantStatusEffect::UNomadInstantStatusEffect()
 {
     // Initialize analytics state
     LastAppliedValue = 0.0f;
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[INSTANT] Instant status effect constructed"));
 }
 
@@ -60,11 +60,11 @@ void UNomadInstantStatusEffect::Nomad_OnStatusEffectStarts(ACharacter* Character
 void UNomadInstantStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Character)
 {
     Super::OnStatusEffectStarts_Implementation(Character);
-    
+
     // Called the moment the instant effect is created and applied to the target.
     // Applies the effect's logic immediately, triggers analytics/UI, and then ends itself.
 
-    UE_LOG_AFFLICTION(Log, TEXT("[INSTANT] Starting instant effect on %s"), 
+    UE_LOG_AFFLICTION(Log, TEXT("[INSTANT] Starting instant effect on %s"),
                       Character ? *Character->GetName() : TEXT("Unknown"));
 
     // Load the configuration asset
@@ -98,7 +98,7 @@ void UNomadInstantStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* 
                     InterruptedCount++;
                 }
             }
-            
+
             if (InterruptedCount > 0)
             {
                 UE_LOG_AFFLICTION(Log, TEXT("[INSTANT] Interrupted %d effects"), InterruptedCount);
@@ -118,7 +118,7 @@ void UNomadInstantStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* 
         {
             // Apply temporary modifier briefly for calculation purposes
             StatsComp->AddAttributeSetModifier(Config->TemporaryAttributeModifier);
-            
+
             // Remove it after a very short delay (next frame)
             if (UWorld* World = Character->GetWorld())
             {
@@ -136,7 +136,7 @@ void UNomadInstantStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* 
 
     // Hybrid system: apply stat/damage/both in a single call
     ApplyHybridEffect(StatMods, Character, Config);
-    
+
     // Sync movement speed to reflect any instant changes to movement attributes
     SyncMovementSpeedModifier(Character, 1.0f);
 
@@ -183,7 +183,7 @@ void UNomadInstantStatusEffect::OnStatusEffectEnds_Implementation()
     // Trigger Blueprint and optional C++ event for VFX/SFX/UI
     OnInstantEffectEnded_Implementation();
     OnInstantEffectEnded();
-    
+
     // Call parent implementation
     Super::OnStatusEffectEnds_Implementation();
 }
@@ -220,7 +220,7 @@ void UNomadInstantStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>&
             if (StatsComp)
             {
                 UNomadStatusEffectUtils::ApplyStatModifications(StatsComp, StatMods);
-                
+
                 // Track any health modification for analytics
                 for (const FStatisticValue& Mod : StatMods)
                 {
@@ -230,7 +230,7 @@ void UNomadInstantStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>&
             }
         }
         break;
-        
+
     case EStatusEffectApplicationMode::DamageEvent:
         {
             // --- DamageEvent: Only damage, no stat mods
@@ -258,7 +258,7 @@ void UNomadInstantStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>&
             }
         }
         break;
-        
+
     case EStatusEffectApplicationMode::Both:
         {
             // --- Both: Apply stat/attribute mods AND damage
@@ -267,7 +267,7 @@ void UNomadInstantStatusEffect::ApplyHybridEffect(const TArray<FStatisticValue>&
             {
                 UNomadStatusEffectUtils::ApplyStatModifications(StatsComp, StatMods);
             }
-            
+
             if (Config->DamageTypeClass)
             {
                 for (const FStatisticValue& Mod : StatMods)
@@ -317,16 +317,16 @@ void UNomadInstantStatusEffect::ApplyChainEffects(ACharacter* Character, UNomadI
 {
     // Apply chain effects through the status effect manager
     if (!Character || !Config) return;
-    
+
     UNomadStatusEffectManagerComponent* Manager = Character->FindComponentByClass<UNomadStatusEffectManagerComponent>();
-    if (!Manager) 
+    if (!Manager)
     {
         UE_LOG_AFFLICTION(Warning, TEXT("[INSTANT] No status effect manager found for chain effects"));
         return;
     }
-    
+
     int32 AppliedCount = 0;
-    
+
     // Apply each chain effect
     for (const TSoftClassPtr<UNomadBaseStatusEffect>& ChainEffectClass : Config->ChainEffects)
     {
@@ -339,8 +339,8 @@ void UNomadInstantStatusEffect::ApplyChainEffects(ACharacter* Character, UNomadI
                 // Apply through the manager for proper handling
                 Manager->Nomad_AddStatusEffect(LoadedClass, Character);
                 AppliedCount++;
-                
-                UE_LOG_AFFLICTION(VeryVerbose, TEXT("[INSTANT] Applied chain effect: %s"), 
+
+                UE_LOG_AFFLICTION(VeryVerbose, TEXT("[INSTANT] Applied chain effect: %s"),
                                   *LoadedClass->GetName());
             }
             else
@@ -349,12 +349,12 @@ void UNomadInstantStatusEffect::ApplyChainEffects(ACharacter* Character, UNomadI
             }
         }
     }
-    
+
     if (AppliedCount > 0)
     {
         // Trigger Blueprint event for VFX/SFX
         OnChainEffectsTriggered(Config->ChainEffects);
-        
+
         UE_LOG_AFFLICTION(Log, TEXT("[INSTANT] Successfully applied %d chain effects"), AppliedCount);
     }
 }
@@ -367,15 +367,15 @@ float UNomadInstantStatusEffect::CalculateEffectMagnitude() const
     {
         return FMath::Abs(LastAppliedValue);
     }
-    
+
     float TotalMagnitude = 0.0f;
-    
+
     // Sum up all stat modification values
     for (const FStatisticValue& StatMod : Config->OnApplyStatModifications)
     {
         TotalMagnitude += FMath::Abs(StatMod.Value);
     }
-    
+
     // Add damage stat mods if using damage events
     if (Config->ApplicationMode == EStatusEffectApplicationMode::DamageEvent ||
         Config->ApplicationMode == EStatusEffectApplicationMode::Both)
@@ -385,7 +385,7 @@ float UNomadInstantStatusEffect::CalculateEffectMagnitude() const
             TotalMagnitude += FMath::Abs(DamageMod.Value);
         }
     }
-    
+
     return TotalMagnitude;
 }
 

@@ -25,7 +25,7 @@ enum class EEffectDurationMode : uint8
  * UNomadTimedEffectConfig
  * -----------------------
  * Configuration for timer-based (finite duration) status effects.
- * 
+ *
  * Key Features:
  * - Flexible duration control (time or tick count)
  * - Optional periodic ticking
@@ -34,7 +34,7 @@ enum class EEffectDurationMode : uint8
  * - Chain effect support
  * - Full hybrid system integration
  * - Stacking support
- * 
+ *
  * Use Cases:
  * - Damage over time (poison, burning)
  * - Healing over time (regeneration)
@@ -73,13 +73,13 @@ public:
 
     /** Effect duration in seconds */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Timing", meta=(
-        EditCondition="bIsPeriodic && DurationMode==EEffectDurationMode::Duration", 
+        EditCondition="bIsPeriodic && DurationMode==EEffectDurationMode::Duration",
         ClampMin="0.01", ToolTip="How long the effect lasts"))
     float EffectDuration = 10.0f;
 
     /** Number of ticks before effect ends */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Timing", meta=(
-        EditCondition="bIsPeriodic && DurationMode==EEffectDurationMode::Ticks", 
+        EditCondition="bIsPeriodic && DurationMode==EEffectDurationMode::Ticks",
         ClampMin="1", ToolTip="How many ticks before effect ends"))
     int32 NumTicks = 5;
 
@@ -89,25 +89,25 @@ public:
 
     /** Stat modifications applied when effect starts */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="One-time changes when effect begins"))
     TArray<FStatisticValue> OnStartStatModifications;
 
     /** Stat modifications applied on each tick */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="bIsPeriodic && ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="bIsPeriodic && ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="Recurring changes on each tick"))
     TArray<FStatisticValue> OnTickStatModifications;
 
     /** Stat modifications applied when effect ends */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="Final changes when effect expires"))
     TArray<FStatisticValue> OnEndStatModifications;
 
     /** Persistent attribute modifiers for effect lifetime */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="Continuous bonuses/penalties while active"))
     FAttributesSetModifier AttributeModifier;
 

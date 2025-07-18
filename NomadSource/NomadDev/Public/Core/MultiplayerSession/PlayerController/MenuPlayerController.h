@@ -1,10 +1,10 @@
 // -----------------------------------------------------------------------------
 // MenuPlayerController.h
 //
-// This PlayerController implements the IMenuControllerWidgetInterface, which 
-// defines functions for pushing various UI widgets (menus, HUDs, prompts) onto 
-// the screen. This implementation simply forwards the calls to the default 
-// implementations provided by the interface. If custom behavior is needed in 
+// This PlayerController implements the IMenuControllerWidgetInterface, which
+// defines functions for pushing various UI widgets (menus, HUDs, prompts) onto
+// the screen. This implementation simply forwards the calls to the default
+// implementations provided by the interface. If custom behavior is needed in
 // the future, you can modify these functions.
 // -----------------------------------------------------------------------------
 

@@ -17,14 +17,14 @@ class USoundBase;
  * UNomadStatusEffectConfigBase
  * ----------------------------
  * Base configuration asset for all Nomad status effects.
- * 
+ *
  * Key Features:
  * - Data-driven: All gameplay, UI, and audio/visual properties
  * - Type-agnostic: Parent for instant, timed, and infinite configs
  * - Hybrid System: Supports stat modification, damage events, or both
  * - Validation: Robust editor and runtime validation
  * - Designer-friendly: Categorized and documented properties
- * 
+ *
  * Design Philosophy:
  * - All values come from config assets, not hardcoded
  * - Supports both Blueprint and C++ workflows
@@ -72,7 +72,7 @@ public:
     //         HYBRID APPLICATION SYSTEM
     // =====================================================
 
-    /** 
+    /**
      * How this effect applies its main impact.
      * - StatModification: Direct stat changes (fast, simple)
      * - DamageEvent: Uses UE damage pipeline (supports resistances, events)
@@ -82,12 +82,12 @@ public:
         ToolTip="Determines how the effect applies damage/healing/stat changes"))
     EStatusEffectApplicationMode ApplicationMode = EStatusEffectApplicationMode::StatModification;
 
-    /** 
+    /**
      * DamageType for DamageEvent or Both modes.
      * Required when using damage events for proper resistance/immunity handling.
      */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Application Mode", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification",
         EditConditionHides, ToolTip="DamageType class for UE damage pipeline integration"))
     TSubclassOf<UDamageType> DamageTypeClass;
 
@@ -97,7 +97,7 @@ public:
      * Only affects Health stat in damage mode.
      */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Application Mode", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::StatModification",
         EditConditionHides, ToolTip="Stat modifications applied via damage events"))
     TArray<FStatisticValue> DamageStatisticMods;
 
@@ -123,7 +123,7 @@ public:
 
     /** Maximum stacks if stacking is enabled (must be >= 1) */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Behavior", meta=(
-        EditCondition="bCanStack", ClampMin="1", 
+        EditCondition="bCanStack", ClampMin="1",
         ToolTip="Maximum number of stacks allowed"))
     int32 MaxStackSize = 1;
 

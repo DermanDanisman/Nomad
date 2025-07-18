@@ -54,7 +54,7 @@ protected:
     // This function reads values from the RangedWeaponData asset and applies them to the weapon.
     UFUNCTION(BlueprintCallable, Category = Item)
     void InitializeItem();
-    
+
     // Data asset containing all the settings and properties for this ranged weapon.
     UPROPERTY(EditAnywhere, Category = "Item Data Asset")
     TObjectPtr<URangedWeaponData> RangedWeaponData;

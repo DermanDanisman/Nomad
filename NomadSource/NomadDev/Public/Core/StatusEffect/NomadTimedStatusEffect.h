@@ -21,7 +21,7 @@ class UNomadBaseStatusEffect;
  * UNomadTimedStatusEffect
  * -----------------------
  * Data-driven, highly extensible timed status effect with enhanced smart removal support.
- * 
+ *
  * Key Features:
  * - Duration-based OR tick-based expiration
  * - Periodic ticking with configurable intervals
@@ -33,13 +33,13 @@ class UNomadBaseStatusEffect;
  * - Full hybrid system support (stat mods, damage events, or both)
  * - Robust timer and memory management
  * - Manager integration for stacking and cleanup
- * 
+ *
  * Perfect for:
  * - Damage/healing over time (poison, regeneration)
  * - Temporary buffs/debuffs (haste, slow)
  * - Environmental effects (burning, freezing)
  * - Status conditions with duration
- * 
+ *
  * Design Philosophy:
  * - All behavior driven by config assets
  * - Manager handles UI notifications and stacking logic
@@ -88,7 +88,7 @@ public:
     /** GUID of attribute set modifier applied by this effect */
     UPROPERTY(BlueprintReadOnly, Category="Runtime")
     FGuid AppliedModifierGuid;
-    
+
     /** The last amount of damage (or healing) applied on tick */
     UPROPERTY(BlueprintReadOnly, Category="Runtime")
     float LastTickDamage = 0.0f;
@@ -110,7 +110,7 @@ public:
 
     /** Sets the duration of the timed effect */
     void SetDuration(float InDuration);
-    
+
     // =====================================================
     //         STACKING/REFRESH LOGIC
     // =====================================================
@@ -174,7 +174,7 @@ protected:
 
     /** Implementation of end logic (calls base, applies config cleanup, etc.) */
     virtual void OnStatusEffectEnds_Implementation() override;
-    
+
     // =====================================================
     //         TIMED EFFECT EVENTS (Blueprint Hooks)
     // =====================================================
@@ -202,7 +202,7 @@ protected:
     /** Called when chain effects are triggered */
     UFUNCTION(BlueprintImplementableEvent, Category="Nomad Timed Effect | Events")
     void OnTimedEffectChainEffectsTriggered(const TArray<TSoftClassPtr<UNomadBaseStatusEffect>>& ChainEffects);
-    
+
     // =====================================================
     //         TIMER MANAGEMENT
     // =====================================================
@@ -215,7 +215,7 @@ protected:
 
     /** Sets up timers for duration and periodic ticks based on config */
     void SetupTimers();
-    
+
     float CalculateDuration(const UNomadTimedEffectConfig* Config) const;
 
     /** Clears timers on end, stacking, or removal */

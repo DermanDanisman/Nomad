@@ -15,9 +15,9 @@ UCLASS()
 class NOMADDEV_API UGroupQuestAction : public UAGSAction
 {
 	GENERATED_BODY()
-	
+
 public:
-    
+
     /** Tag of the previous quest that must be completed before activating this one */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GroupQuest")
     FGameplayTag QuestTag;

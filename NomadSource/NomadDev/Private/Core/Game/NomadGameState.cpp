@@ -8,7 +8,7 @@
 
 ANomadGameState::ANomadGameState(): CurrentPlayerCount(0)
 {
-    
+
 }
 
 void ANomadGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

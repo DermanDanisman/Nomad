@@ -9,7 +9,7 @@
 
 AMultiplayerGameState::AMultiplayerGameState(): CurrentPlayerCount(0)
 {
-    
+
 }
 
 void AMultiplayerGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

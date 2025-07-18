@@ -7,7 +7,7 @@
 #include "MultiplayerMenuGameMode.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API AMultiplayerMenuGameMode : public AGameMode

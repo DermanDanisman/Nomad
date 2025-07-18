@@ -20,8 +20,8 @@ public:
     ANomadPickupItem();
 
     /*———— Data & Runtime State ————*/
-    /** 
-     * Asset containing all configuration: mesh, tags, tool requirements, 
+    /**
+     * Asset containing all configuration: mesh, tags, tool requirements,
      * loot table, health, gather time, destroy flag.
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gatherable")

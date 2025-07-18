@@ -164,7 +164,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
  * UNomadAfflictionComponent
  * -------------------------
  * Enhanced UI-facing component for tracking and broadcasting status effect changes.
- * 
+ *
  * Key Features:
  * - Maintains active affliction state for UI display
  * - Provides rich notification context for popups/toasts
@@ -172,7 +172,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
  * - Integrates seamlessly with the status effect manager
  * - Handles config lookup for UI data (icons, colors, names)
  * - Optimized for UI performance with lightweight structs
- * 
+ *
  * Design Philosophy:
  * - Pure UI component - no gameplay logic
  * - Event-driven updates from status effect manager
@@ -197,14 +197,14 @@ public:
     //         MANAGER INTEGRATION (MISSING FUNCTION)
     // =====================================================
 
-    /** 
+    /**
      * Called by status effect manager when active effects change.
      * This was the missing function that caused the error!
      */
     UFUNCTION(BlueprintCallable, Category="Affliction|Manager Integration")
     void OnActiveEffectsChanged();
 
-    /** 
+    /**
      * Syncs with the status effect manager to rebuild UI state.
      * Called during initialization and when needed.
      */
@@ -218,7 +218,7 @@ public:
     /**
      * Updates affliction state and broadcasts notifications.
      * Called by the status effect manager for all status changes.
-     * 
+     *
      * @param AfflictionTag      Tag identifying the affliction
      * @param NotificationType   Type of change (applied, removed, stacked, etc.)
      * @param PreviousStacks     Stack count before change

@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // UCommonMultiplayerLobbyPassword.cpp
 //
-// Implements the functionality for the lobby password widget. This widget 
-// handles the join session process (when a password is required) by binding 
+// Implements the functionality for the lobby password widget. This widget
+// handles the join session process (when a password is required) by binding
 // to the join session delegate and then initiating client travel if successful.
 // -----------------------------------------------------------------------------
 
@@ -143,7 +143,7 @@ void UCommonMultiplayerLobbyPassword::JoinButtonClicked()
 {
     // -------------------------------------------------------------------------
     // Prevent Duplicate Button Clicks:
-    // Disable the join button immediately so that multiple clicks do not trigger 
+    // Disable the join button immediately so that multiple clicks do not trigger
     // multiple join attempts.
     // -------------------------------------------------------------------------
     if (JoinButton)

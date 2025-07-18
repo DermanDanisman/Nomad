@@ -22,7 +22,7 @@ class UCommonButtonBase;
 struct FPlayerInfo;
 
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API UCommonMultiplayerLobbyMenu : public UCommonActivatableWidget {

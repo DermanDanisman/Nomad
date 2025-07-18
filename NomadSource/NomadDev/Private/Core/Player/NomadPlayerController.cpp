@@ -34,11 +34,11 @@ void ANomadPlayerController::BeginPlay()
     if (Subsystem)
     {
         Subsystem->AddMappingContext(InputMappingContext, 0);
-        
+
         // Debug to confirm it worked
         if (GEngine)
         {
-            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, 
+            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green,
                 TEXT("✅ Input Mapping Context Added Successfully!"));
         }
     }
@@ -193,9 +193,9 @@ void ANomadPlayerController::ToggleQuickbar()
 
     // Debug: Print current state on screen
     const EActiveQuickbar CurrentBar = EquipmentComp->GetActiveQuickbarEnum();
-    
+
     // Toggle between Combat and Tools
-    const EActiveQuickbar Next = 
+    const EActiveQuickbar Next =
         (CurrentBar == EActiveQuickbar::Combat)
           ? EActiveQuickbar::Tools
           : EActiveQuickbar::Combat;

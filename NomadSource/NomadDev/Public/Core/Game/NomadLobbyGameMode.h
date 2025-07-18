@@ -7,11 +7,11 @@
 #include "NomadLobbyGameMode.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API ANomadLobbyGameMode : public AACFGameMode
 {
 	GENERATED_BODY()
-	
+
 };

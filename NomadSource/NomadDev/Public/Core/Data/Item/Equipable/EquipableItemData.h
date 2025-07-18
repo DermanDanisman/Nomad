@@ -28,7 +28,7 @@ struct FEquipableItemInfo : public FBaseItemInfo
     // Skeletal Mesh and Weapon Type Properties
     // ================================
 
-    /** 
+    /**
      * The skeletal mesh used by the armor.
      * This mesh represents the 3D model of the armor that will be displayed in the game.
      * This property is typically set to the mesh of the armor.
@@ -43,21 +43,21 @@ struct FEquipableItemInfo : public FBaseItemInfo
     // Equippable Item Properties
     // ================================
 
-    /** 
+    /**
      * Sound effect played when the item is equipped (e.g., weapon, armor, clothing, or accessories).
      * This is typically used for UI feedback or character animation when an item is equipped.
      */
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Equippable | Sounds")
     TObjectPtr<USoundCue> EquipSound;
 
-    /** 
+    /**
      * Sound effect played when the item is unequipped (e.g., weapon, armor, clothing, or accessories).
      * Similar to EquipSound, this is used for UI feedback or character animation when an item is removed.
      */
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Equippable | Sounds")
     TObjectPtr<USoundCue> UnequipSound;
 
-    /** 
+    /**
      * List of primary attribute requirements to equip this item (e.g., strength, agility).
      * This ensures that a character meets specific criteria before they can equip the item.
      * For example, an armor might require a minimum strength attribute to wear.
@@ -65,7 +65,7 @@ struct FEquipableItemInfo : public FBaseItemInfo
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equippable | Attributes")
     TArray<FAttribute> PrimaryAttributesRequirement;
 
-    /** 
+    /**
      * Modifier applied to a character's attributes once the item is equipped.
      * For example, an item might increase or decrease certain stats like health, stamina, or defense.
      * This modifier could affect things like strength, agility, or other player attributes.
@@ -73,7 +73,7 @@ struct FEquipableItemInfo : public FBaseItemInfo
     UPROPERTY(EditAnywhere, SaveGame, BlueprintReadWrite, Category = "Equippable | Attributes")
     FAttributesSetModifier AttributeModifier;
 
-    /** 
+    /**
      * Gameplay effect that is applied once the item is equipped (e.g., healing, buffs, debuffs).
      * This could be an effect like increasing a character's damage output or granting them immunity to certain debuffs.
      * For example, an armor piece might grant a defensive buff or an accessory could provide a healing effect over time.
@@ -83,7 +83,7 @@ struct FEquipableItemInfo : public FBaseItemInfo
 };
 
 /**
- * 
+ *
  */
 UCLASS(BlueprintType)
 class NOMADDEV_API UEquipableItemData : public UDataAsset
@@ -94,5 +94,5 @@ public:
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Item Information")
     FEquipableItemInfo EquipableItemInfo;
-	
+
 };

@@ -18,7 +18,7 @@ class UNomadBaseStatusEffect;
  * UNomadInstantStatusEffect
  * -------------------------
  * Data-driven, instant (one-shot) status effect for immediate gameplay application.
- * 
+ *
  * Key Features:
  * - Applies its effect immediately on creation
  * - Does NOT persist, does not tick, not tracked by manager for stacking
@@ -28,21 +28,21 @@ class UNomadBaseStatusEffect;
  * - Temporary attribute modifiers for brief calculations
  * - Screen effects and floating text support
  * - Smart removal system compatible (though rarely needed)
- * 
+ *
  * Perfect for:
  * - Healing potions and damage spells
  * - Instant stat modifications
  * - Trigger effects and gameplay events
  * - Resource modifications (mana, stamina)
  * - Interrupt abilities
- * 
+ *
  * Design Philosophy:
  * - Apply immediately and end (no persistence)
  * - Chain effects for complex interactions
  * - Interrupt system for tactical gameplay
  * - Rich feedback for immediate impact
  * - Manager integration for analytics only
- * 
+ *
  * Use Cases:
  * - Instant healing: +100 Health
  * - Damage spells: -50 Health via damage event
@@ -64,7 +64,7 @@ public:
     // =====================================================
     //         CONFIGURATION ACCESS
     // =====================================================
-    
+
     /** Loads and returns the config asset, or nullptr if not set/invalid */
     virtual UNomadInstantEffectConfig* GetEffectConfig() const override;
 
@@ -75,7 +75,7 @@ public:
     // =====================================================
     //         MANAGER ACTIVATION ENTRYPOINT
     // =====================================================
-    
+
     /** Called by the effect manager to trigger instant effect logic polymorphically */
     virtual void Nomad_OnStatusEffectStarts(ACharacter* Character) override;
 
@@ -99,17 +99,17 @@ protected:
     // =====================================================
     //         CORE LIFECYCLE OVERRIDES
     // =====================================================
-    
+
     /** Called when the effect is created/applied. Handles all logic and ends itself */
     virtual void OnStatusEffectStarts_Implementation(ACharacter* Character) override;
 
     /** Called when the effect ends (after instant application) */
     virtual void OnStatusEffectEnds_Implementation() override;
-    
+
     // =====================================================
     //         HYBRID SYSTEM: STAT/DAMAGE/BOTH APPLICATION
     // =====================================================
-    
+
     /** Applies stat mods and/or damage according to the config's ApplicationMode */
     virtual void ApplyHybridEffect(const TArray<FStatisticValue>& StatMods, AActor* Target, UObject* EffectConfig) override;
 

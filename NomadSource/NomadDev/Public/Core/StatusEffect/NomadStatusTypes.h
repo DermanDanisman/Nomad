@@ -20,10 +20,10 @@ enum class ENomadStatusCategory : uint8
 {
     /** Good effects like healing, buffs */
     Positive        UMETA(DisplayName="Positive"),
-    
+
     /** Bad effects like poison, debuffs */
     Negative        UMETA(DisplayName="Negative"),
-    
+
     /** Neutral or special effects */
     Neutral         UMETA(DisplayName="Neutral")
 };
@@ -55,10 +55,10 @@ enum class EStatusEffectApplicationMode : uint8
 {
     /** Only modifies stats/attributes directly */
     StatModification    UMETA(DisplayName="Stat Modification"),
-    
+
     /** Only uses UE damage events */
     DamageEvent        UMETA(DisplayName="Damage Event"),
-    
+
     /** Uses both stat modification and damage events */
     Both               UMETA(DisplayName="Both")
 };
@@ -127,24 +127,24 @@ public:
 
     // ======== Operators ========
 
-    FORCEINLINE bool operator==(const FNomadStatusEffect& Other) const 
-    { 
-        return ACFStatusEffect == Other.ACFStatusEffect; 
+    FORCEINLINE bool operator==(const FNomadStatusEffect& Other) const
+    {
+        return ACFStatusEffect == Other.ACFStatusEffect;
     }
 
-    FORCEINLINE bool operator!=(const FNomadStatusEffect& Other) const 
-    { 
-        return ACFStatusEffect != Other.ACFStatusEffect; 
+    FORCEINLINE bool operator!=(const FNomadStatusEffect& Other) const
+    {
+        return ACFStatusEffect != Other.ACFStatusEffect;
     }
 
-    FORCEINLINE bool operator==(const FGameplayTag& OtherTag) const 
-    { 
-        return ACFStatusEffect == OtherTag; 
+    FORCEINLINE bool operator==(const FGameplayTag& OtherTag) const
+    {
+        return ACFStatusEffect == OtherTag;
     }
 
-    FORCEINLINE bool operator==(const FStatusEffect& OtherACFEffect) const 
-    { 
-        return ACFStatusEffect == OtherACFEffect; 
+    FORCEINLINE bool operator==(const FStatusEffect& OtherACFEffect) const
+    {
+        return ACFStatusEffect == OtherACFEffect;
     }
 };
 

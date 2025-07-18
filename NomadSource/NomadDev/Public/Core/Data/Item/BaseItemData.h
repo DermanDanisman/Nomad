@@ -24,7 +24,7 @@ struct FBaseItemInfo
 };
 
 /**
- * 
+ *
  */
 UCLASS(BlueprintType)
 class NOMADDEV_API UBaseItemData : public UDataAsset

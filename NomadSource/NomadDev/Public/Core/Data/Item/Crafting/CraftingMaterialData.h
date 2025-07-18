@@ -20,7 +20,7 @@ struct FCraftingMaterialInfo : public FBaseItemInfo
 };
 
 /**
- * 
+ *
  */
 UCLASS(BlueprintType)
 class NOMADDEV_API UCraftingMaterialData : public UDataAsset
@@ -31,5 +31,5 @@ public:
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Item Information")
     FCraftingMaterialInfo CraftingMaterialInfo;
-	
+
 };

@@ -16,7 +16,7 @@ class NOMADDEV_API ANomadGameState : public AACFGameState
 {
 	GENERATED_BODY()
 public:
-    
+
     ANomadGameState();
 
     // This property will be replicated to all clients.
@@ -36,5 +36,5 @@ public:
 
     // Required for replication
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
+
 };

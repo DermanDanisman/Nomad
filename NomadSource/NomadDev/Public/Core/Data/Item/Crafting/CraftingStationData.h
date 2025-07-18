@@ -27,7 +27,7 @@ struct FCraftingStationInfo
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crafting Station | Visuals")
     TObjectPtr<UStaticMesh> CraftingStationStaticMesh;
-    
+
     // Display name for the crafting station
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crafting Station | Data")
     FText CraftingStationName;
@@ -35,7 +35,7 @@ struct FCraftingStationInfo
     // Recipes available at this station
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crafting Station | Recipes")
     TArray<UDataAsset*> ItemRecipes;
-    
+
     // Map marker related properties
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crafting Station | Map Marker")
     TObjectPtr<UTexture2D> MarkerTexture;
@@ -56,7 +56,7 @@ struct FCraftingStationInfo
 };
 
 /**
- * 
+ *
  */
 UCLASS()
 class NOMADDEV_API UCraftingStationData : public UDataAsset

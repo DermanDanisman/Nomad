@@ -12,14 +12,14 @@
  * UNomadSurvivalStatusEffect
  * --------------------------
  * Base class for all survival-related status effects (starvation, dehydration, temperature hazards).
- * 
+ *
  * Key Features:
  * - Inherits from UNomadInfiniteStatusEffect for persistent effects until conditions improve
  * - Automatically applies attribute modifiers from config (movement speed, stamina cap reductions)
  * - Supports damage over time based on survival requirements
  * - Handles visual effects (screen tints, particles) for different severity levels
  * - Integrates with the survival component for condition-based application/removal
- * 
+ *
  * Design Philosophy:
  * - All gameplay values are data-driven via UNomadInfiniteEffectConfig
  * - No hard-coded multipliers or thresholds
@@ -64,10 +64,10 @@ protected:
     ESurvivalSeverity CurrentSeverity = ESurvivalSeverity::None;
 
     /** Damage over time percentage (of max health) applied per tick */
-    UPROPERTY(BlueprintReadOnly, Category="Survival Effect") 
+    UPROPERTY(BlueprintReadOnly, Category="Survival Effect")
     float DoTPercent = 0.0f;
 
-    /** 
+    /**
      * Called when the survival effect starts.
      * Applies attribute modifiers and visual effects based on severity.
      */
@@ -108,10 +108,10 @@ private:
  * UNomadStarvationStatusEffect
  * ----------------------------
  * Status effect for hunger-related penalties.
- * 
+ *
  * Applied when hunger drops below threshold levels.
  * Causes stamina cap reduction, movement speed penalties, and health damage over time.
- * 
+ *
  * Requirements Implementation:
  * - Stamina Cap Decrease (via attribute modifiers)
  * - %0 Damage Over Time % 0.5 per second (via DoT system)
@@ -144,7 +144,7 @@ protected:
      * Removes starvation-specific visual effects.
      * Should stop desaturation and audio effects.
      */
-    UFUNCTION(BlueprintImplementableEvent, Category="Starvation Effect")  
+    UFUNCTION(BlueprintImplementableEvent, Category="Starvation Effect")
     void RemoveStarvationVisuals();
 };
 
@@ -152,13 +152,13 @@ protected:
  * UNomadDehydrationStatusEffect
  * -----------------------------
  * Status effect for thirst-related penalties.
- * 
+ *
  * Applied when thirst drops below threshold levels.
  * Causes stamina cap reduction, movement speed penalties, and health damage over time.
- * 
+ *
  * Requirements Implementation:
  * - Stamina Cap Decrease (via attribute modifiers)
- * - %0 Damage Over Time % 1 per second (via DoT system) 
+ * - %0 Damage Over Time % 1 per second (via DoT system)
  * - Movement speed reduction (via attribute modifiers)
  * - Visual: Faint B&W Filter, Subtle Crack Pattern overlay, heavy breathing (via Blueprint events)
  * - Duration: Permanent until thirst improves
@@ -195,10 +195,10 @@ protected:
  * UNomadHeatstrokeStatusEffect
  * ----------------------------
  * Status effect for heat-related penalties.
- * 
+ *
  * Applied when body temperature exceeds safe thresholds.
  * Has multiple severity levels (Mild/Heavy/Extreme) with escalating penalties.
- * 
+ *
  * Requirements Implementation:
  * - Thirst consumption multiplier (X2, X3, X4 based on severity)
  * - Movement speed reduction (%10, %20, %30 based on severity)
@@ -237,10 +237,10 @@ protected:
  * UNomadHypothermiaStatusEffect
  * -----------------------------
  * Status effect for cold-related penalties.
- * 
+ *
  * Applied when body temperature drops below safe thresholds.
  * Has multiple severity levels (Mild/Heavy/Extreme) with escalating penalties.
- * 
+ *
  * Requirements Implementation:
  * - Hunger consumption multiplier (X2, X3, X4 based on severity)
  * - Movement speed reduction (%10, %20, %30 based on severity)

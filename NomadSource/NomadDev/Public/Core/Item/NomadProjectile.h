@@ -34,19 +34,19 @@ public:
     // INTERACTION INTERFACE METHODS
     // Called when a pawn interacts with this projectile.
     virtual void OnInteractedByPawn_Implementation(class APawn* Pawn, const FString& interactionType = "") override;
-    
+
     // Determines whether this projectile can be interacted with by a pawn.
     virtual bool CanBeInteracted_Implementation(class APawn* Pawn) override;
-    
+
     // Returns the name of the interactable (for UI purposes).
     virtual FText GetInteractableName_Implementation() override;
 
     // Called when the projectile is registered as interactable by a pawn.
     virtual void OnInteractableRegisteredByPawn_Implementation(APawn* Pawn) override;
-    
+
     // Called when the projectile is unregistered as interactable by a pawn.
     virtual void OnInteractableUnregisteredByPawn_Implementation(APawn* Pawn) override;
-    
+
     // Called when local interaction occurs.
     virtual void OnLocalInteractedByPawn_Implementation(APawn* Pawn, const FString& String) override;
     // END INTERACTION INTERFACE METHODS
@@ -77,7 +77,7 @@ protected:
     // Configures properties such as movement, collision, lifetime, and visual effects.
     UFUNCTION(BlueprintCallable, Category = Item)
     void InitializeItem();
-    
+
     // Pointer to the data asset containing all the projectile settings.
     UPROPERTY(EditAnywhere, Category = "Item Data Asset")
     TObjectPtr<UProjectileData> ProjectileData;

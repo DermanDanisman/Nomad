@@ -16,7 +16,7 @@ UNomadSurvivalNeedsComponent::UNomadSurvivalNeedsComponent()
     // Disable regular ticking; this component is stepped by external manager (e.g. UDS clock)
     // This prevents unnecessary CPU usage and ensures survival ticks are synchronized with game time
     PrimaryComponentTick.bCanEverTick = false;
-    
+
     // Enable replication for multiplayer support - essential for client UI updates
     // Clients need to see survival state changes without constant server requests
     SetIsReplicatedByDefault(true);
@@ -32,16 +32,16 @@ UNomadSurvivalNeedsComponent::UNomadSurvivalNeedsComponent()
 void UNomadSurvivalNeedsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-    
+
     // Replicate essential survival data to clients for UI display
     // Each player only receives their own component's data to reduce network traffic
-    
+
     // Current temperature at player location - used for UI temperature displays
     DOREPLIFETIME(UNomadSurvivalNeedsComponent, LastExternalTemperature);
-    
+
     // Overall survival status - used for UI state indicators and screen effects
     DOREPLIFETIME(UNomadSurvivalNeedsComponent, CurrentSurvivalState);
-    
+
     // Normalized temp for UI bars - pre-calculated to reduce client computation
     DOREPLIFETIME(UNomadSurvivalNeedsComponent, LastTemperatureNormalized);
 }
@@ -50,57 +50,57 @@ void UNomadSurvivalNeedsComponent::BeginPlay()
 {
     // Log component initialization for debugging survival system startup
     SURVIVAL_LOG_ENTER("BeginPlay");
-    
+
     Super::BeginPlay();
 
     // Comprehensive validation with better error handling
     // Early exit if configuration is missing to prevent crashes
     if (!SurvivalConfig)
     {
-        UE_LOG_SURVIVAL(Error, TEXT("SurvivalConfig is null on %s! Survival system will not function."), 
+        UE_LOG_SURVIVAL(Error, TEXT("SurvivalConfig is null on %s! Survival system will not function."),
                        *GetOwner()->GetName());
         return; // Critical failure - cannot continue without config
     }
-    
+
     // Cache component references to avoid expensive FindComponentByClass calls during ticks
     // These components are required for survival system functionality
     StatisticsComponent = GetOwner()->FindComponentByClass<UARSStatisticsComponent>();
     StatusEffectManagerComponent = GetOwner()->FindComponentByClass<UNomadStatusEffectManagerComponent>();
-    
+
     // StatisticsComponent is critical - survival cannot function without it
     if (!StatisticsComponent)
     {
-        UE_LOG_SURVIVAL(Error, TEXT("ARSStatisticsComponent missing on %s! Survival system will not function."), 
+        UE_LOG_SURVIVAL(Error, TEXT("ARSStatisticsComponent missing on %s! Survival system will not function."),
                        *GetOwner()->GetName());
         return; // Critical failure - cannot modify stats without this component
     }
-    
+
     // StatusEffectManagerComponent is optional but recommended for gameplay effects
     if (!StatusEffectManagerComponent)
     {
-        UE_LOG_SURVIVAL(Warning, TEXT("NomadStatusEffectManagerComponent missing on %s - status effects will not work"), 
+        UE_LOG_SURVIVAL(Warning, TEXT("NomadStatusEffectManagerComponent missing on %s - status effects will not work"),
                        *GetOwner()->GetName());
         // Continue execution - survival works without status effects, just less gameplay depth
     }
-    
+
     // Validate config data to prevent divide-by-zero and other math errors
     // Negative or zero values would break the decay calculation system
     if (GetConfig()->GetDailyHungerLoss() <= 0.f || GetConfig()->GetDailyThirstLoss() <= 0.f)
     {
-        UE_LOG_SURVIVAL(Error, TEXT("Invalid daily loss values in SurvivalConfig on %s"), 
+        UE_LOG_SURVIVAL(Error, TEXT("Invalid daily loss values in SurvivalConfig on %s"),
                        *GetOwner()->GetName());
         return; // Critical failure - cannot calculate decay rates
     }
-    
+
     // Calculate per-minute base decay from 24-hour totals
     // This converts designer-friendly "daily loss" values into simulation-ready per-minute rates
     BaseHungerPerMinute = GetConfig()->GetDailyHungerLoss() / MINUTES_PER_DAY;
     BaseThirstPerMinute = GetConfig()->GetDailyThirstLoss() / MINUTES_PER_DAY;
-    
+
     // Log successful initialization with calculated values for debugging
-    UE_LOG_SURVIVAL(Log, TEXT("Survival system initialized on %s. Hunger: %.4f/min, Thirst: %.4f/min"), 
+    UE_LOG_SURVIVAL(Log, TEXT("Survival system initialized on %s. Hunger: %.4f/min, Thirst: %.4f/min"),
                    *GetOwner()->GetName(), BaseHungerPerMinute, BaseThirstPerMinute);
-    
+
     SURVIVAL_LOG_EXIT("BeginPlay");
 }
 
@@ -108,11 +108,11 @@ float UNomadSurvivalNeedsComponent::GetHungerPercent() const
 {
     // Early exit if required components are missing
     if (!StatisticsComponent || !GetConfig()) return 0.f;
-    
+
     // Get current and maximum hunger values from statistics system
     const float Current = StatisticsComponent->GetCurrentValueForStatitstic(GetConfig()->GetHungerStatTag());
     const float Max = StatisticsComponent->GetMaxValueForStatitstic(GetConfig()->GetHungerStatTag());
-    
+
     // Return normalized percentage [0..1] for UI progress bars
     // Validate values to prevent NaN/infinity from bad data
     return (IsValidStatValue(Current) && Max > 0.f) ? FMath::Clamp(Current / Max, 0.f, 1.f) : 0.f;
@@ -122,11 +122,11 @@ float UNomadSurvivalNeedsComponent::GetThirstPercent() const
 {
     // Early exit if required components are missing
     if (!StatisticsComponent || !GetConfig()) return 0.f;
-    
+
     // Get current and maximum thirst values from statistics system
     const float Current = StatisticsComponent->GetCurrentValueForStatitstic(GetConfig()->GetThirstStatTag());
     const float Max = StatisticsComponent->GetMaxValueForStatitstic(GetConfig()->GetThirstStatTag());
-    
+
     // Return normalized percentage [0..1] for UI progress bars
     // Validate values to prevent NaN/infinity from bad data
     return (IsValidStatValue(Current) && Max > 0.f) ? FMath::Clamp(Current / Max, 0.f, 1.f) : 0.f;
@@ -143,11 +143,11 @@ float UNomadSurvivalNeedsComponent::GetNormalizedTemperatureForCurve(const float
 {
     // Early exit if config is missing
     if (!GetConfig()) return 0.f;
-    
+
     // Get temperature range from config for normalization
     const float MinT = GetConfig()->GetMinExternalTempCelsius();
     const float MaxT = GetConfig()->GetMaxExternalTempCelsius();
-    
+
     // Normalize temperature to [0..1] range for curve input
     // This is different from UI normalization - it's purely mathematical for curve lookups
     return FMath::Clamp((InExternalTemperature - MinT) / (MaxT - MinT), 0.f, 1.f);
@@ -157,26 +157,26 @@ float UNomadSurvivalNeedsComponent::GetNormalizedActivity() const
 {
     // Early exit if config is missing
     if (!GetConfig()) return 0.f;
-    
+
     // Try to get character owner to access velocity information
     if (const ACharacter* CharacterOwner = Cast<ACharacter>(GetOwner()))
     {
         // Calculate movement speed from velocity magnitude
         const float Speed = CharacterOwner->GetVelocity().Size();
-        
+
         // Get threshold values from config for activity level determination
         const float Walk = GetConfig()->GetWalkingSpeedThreshold();
         const float Sprint = GetConfig()->GetSprintingSpeedThreshold();
-        
+
         // Determine activity level based on movement speed
         if (Speed <= Walk) return 0.f; // standing/walking - no extra activity modifier
         if (Speed >= Sprint) return 1.f; // sprinting - maximum activity modifier
-        
+
         // Normalize between walking and sprinting for partial activity modifier
         // This creates smooth transitions between activity levels
         return FMath::Clamp((Speed - Walk) / (Sprint - Walk), 0.f, 1.f);
     }
-    
+
     // Default to no activity if character owner is not available
     return 0.f;
 }
@@ -197,14 +197,14 @@ void UNomadSurvivalNeedsComponent::OnMinuteTick(const float TimeOfDay)
     {
         return; // Early exit for clients - they don't run simulation logic
     }
-    
+
     // Validate required components before proceeding with simulation
-    if (!StatisticsComponent || !GetConfig()) 
+    if (!StatisticsComponent || !GetConfig())
     {
         UE_LOG_SURVIVAL(Warning, TEXT("OnMinuteTick called but required components/config missing"));
         return; // Cannot proceed without these critical components
     }
-        
+
     // Cache all stat values once per tick to avoid redundant component lookups
     // This optimization reduces expensive StatisticsComponent calls from ~10+ to 1 per tick
     const FCachedStatValues CachedValues = GetCachedStatValues();
@@ -213,81 +213,81 @@ void UNomadSurvivalNeedsComponent::OnMinuteTick(const float TimeOfDay)
         UE_LOG_SURVIVAL_STATS(Warning, TEXT("Failed to cache stat values in OnMinuteTick"));
         return; // Cannot proceed with invalid stat data
     }
-        
+
     // Verbose logging for development debugging - shows all cached values
-    UE_LOG_SURVIVAL_STATS(VeryVerbose, TEXT("Cached Stats - H:%.2f T:%.2f BT:%.2f E:%.2f"), 
+    UE_LOG_SURVIVAL_STATS(VeryVerbose, TEXT("Cached Stats - H:%.2f T:%.2f BT:%.2f E:%.2f"),
                          CachedValues.Hunger, CachedValues.Thirst, CachedValues.BodyTemp, CachedValues.Endurance);
-    
+
     // Get player-specific temperature instead of global weather temperature
     // This allows different players to experience different temperatures based on location
     // Example: Player A in desert = 45°C, Player B in cave = 15°C
     const float PlayerLocationTemperature = GetTemperatureAtPlayerLocation();
-    
+
     // Cache temperature values for replication to client UI
     // Pre-calculating these reduces client-side computation load
     LastExternalTemperature = PlayerLocationTemperature;
     LastTemperatureNormalized = GetTemperatureNormalized(PlayerLocationTemperature);
-    
+
     // Pre-calculate normalized values for curve lookups to avoid redundant calculations
     const float NormalizedTempForCurve = GetNormalizedTemperatureForCurve(PlayerLocationTemperature);
     const float NormalizedActivity = GetNormalizedActivity();
-    
+
     // Calculate environmental and activity modifiers using designer curves
     // These modifiers add/subtract from base decay rates based on conditions
     const float HungerTemperatureMod = ComputeColdHungerModifier(NormalizedTempForCurve);
     const float ThirstTemperatureMod = ComputeHotThirstModifier(NormalizedTempForCurve);
     const float HungerActivityMod = ComputeHungerActivityModifier(NormalizedActivity);
     const float ThirstActivityMod = ComputeThirstActivityModifier(NormalizedActivity);
-    
+
     // Apply endurance-based reduction to base decay rates
     // Higher endurance = slower hunger/thirst decay (survival skill simulation)
-    const float EffectiveHungerBase = FMath::Max(0.f, 
+    const float EffectiveHungerBase = FMath::Max(0.f,
         BaseHungerPerMinute * (1.f - CachedValues.Endurance * GetConfig()->GetEnduranceDecayPerPoint()));
-    const float EffectiveThirstBase = FMath::Max(0.f, 
+    const float EffectiveThirstBase = FMath::Max(0.f,
         BaseThirstPerMinute * (1.f - CachedValues.Endurance * GetConfig()->GetEnduranceDecayPerPoint()));
-    
+
     // Calculate final decay values: base rate * (1 + all modifiers)
     // Formula: FinalDecay = BaseRate * (1 + TemperatureMod + ActivityMod + OtherMods)
     float CalculatedHungerDecay = EffectiveHungerBase * (1.f + HungerActivityMod + HungerTemperatureMod);
     float CalculatedThirstDecay = EffectiveThirstBase * (1.f + ThirstActivityMod + ThirstTemperatureMod);
-    
+
     // Apply debug multiplier for testing/balancing purposes
     // Designers can speed up/slow down decay for testing without changing base values
     CalculatedHungerDecay *= GetConfig()->GetDebugDecayMultiplier();
     CalculatedThirstDecay *= GetConfig()->GetDebugDecayMultiplier();
-    
+
     // Ensure decay values are never negative (could happen with extreme negative modifiers)
     // Negative decay would heal the player, which might not be intended
     CalculatedHungerDecay = FMath::Max(0.f, CalculatedHungerDecay);
     CalculatedThirstDecay = FMath::Max(0.f, CalculatedThirstDecay);
-    
+
     // Broadcast computed decay values for UI/analytics systems
     // UI can show current decay rates, analytics can track balance issues
     OnDecaysComputed.Broadcast(CalculatedHungerDecay, CalculatedThirstDecay);
-    
+
     // Apply calculated decay to actual stat values in the statistics system
     ApplyDecayToStats(CalculatedHungerDecay, CalculatedThirstDecay);
-    
+
     // Evaluate all survival state transitions and fire appropriate events
     // Order matters here - state transitions should happen before status effects
     EvaluateSurvivalStateTransitions(CachedValues);
-    
+
     // NEW: Apply data-driven survival status effects based on current conditions
     EvaluateAndApplySurvivalEffects(CachedValues);
-    
+
     // Continue with existing systems
     EvaluateWeatherHazards(CachedValues);
-    
+
     // Update body temperature simulation based on environmental conditions
     UpdateBodyTemperature(PlayerLocationTemperature, CachedValues);
-    
+
     // Fire periodic warning events if conditions are met
     // These use escalating frequency system for increased urgency over time
     MaybeFireStarvationWarning(TimeOfDay, CachedValues.Hunger);
     MaybeFireDehydrationWarning(TimeOfDay, CachedValues.Thirst);
     MaybeFireHeatstrokeWarning(TimeOfDay, CachedValues.BodyTemp);
     MaybeFireHypothermiaWarning(TimeOfDay, CachedValues.BodyTemp);
-    
+
     // Update overall survival state based on current conditions
     // RENAMED: This is now clearly UI-only function
     UpdateSurvivalUIState(CachedValues);
@@ -305,7 +305,7 @@ UNomadSurvivalNeedsComponent::FCachedStatValues UNomadSurvivalNeedsComponent::Ge
 {
     // Initialize return structure with default values
     FCachedStatValues Values;
-    
+
     // Only proceed if both required components are available
     if (StatisticsComponent && GetConfig())
     {
@@ -315,11 +315,11 @@ UNomadSurvivalNeedsComponent::FCachedStatValues UNomadSurvivalNeedsComponent::Ge
         Values.Thirst = StatisticsComponent->GetCurrentValueForStatitstic(GetConfig()->GetThirstStatTag());
         Values.BodyTemp = StatisticsComponent->GetCurrentValueForStatitstic(GetConfig()->GetBodyTempStatTag());
         Values.Endurance = StatisticsComponent->GetCurrentPrimaryAttributeValue(GetConfig()->GetEnduranceStatTag());
-        
+
         // Mark as valid so calling code knows the data is reliable
         Values.bValid = true;
     }
-    
+
     // Return cached values (will be invalid if components missing)
     return Values;
 }
@@ -328,7 +328,7 @@ float UNomadSurvivalNeedsComponent::ComputeNormalizedTemperature(const float InR
 {
     // Early exit if config is missing
     if (!GetConfig()) return 0.f;
-    
+
     // Get temperature ranges based on current temperature unit setting
     // This allows the same config to work with both Celsius and Fahrenheit inputs
     const float MinT = (TemperatureUnit == ETemperatureUnit::Celsius)
@@ -347,7 +347,7 @@ float UNomadSurvivalNeedsComponent::ComputeNormalizedTemperature(const float InR
         const float Normalized = (NeutralT - ClampedTemp) / (NeutralT - MinT);
         return FMath::Clamp(Normalized * GetConfig()->GetExternalTemperatureScale(), 0.f, 1.f);
     }
-    // For warm bar: fills as temp goes above neutral (0°C/32°F)  
+    // For warm bar: fills as temp goes above neutral (0°C/32°F)
     // Used for UI heat indicators - higher bar = hotter temperature
     else if (bIsWarmBar && InRawTemperature > NeutralT)
     {
@@ -355,7 +355,7 @@ float UNomadSurvivalNeedsComponent::ComputeNormalizedTemperature(const float InR
         const float Normalized = (ClampedTemp - NeutralT) / (MaxT - NeutralT);
         return FMath::Clamp(Normalized * GetConfig()->GetExternalTemperatureScale(), 0.f, 1.f);
     }
-    
+
     // At neutral temp, both bars are 0 (comfortable temperature)
     return 0.f;
 }
@@ -364,7 +364,7 @@ float UNomadSurvivalNeedsComponent::ComputeColdHungerModifier(const float Normal
 {
     // Early exit if config is missing
     if (!GetConfig()) return 0.f;
-    
+
     // Use designer curve to determine hunger modifier based on temperature
     // Cold temperatures typically increase hunger (body burns more calories for warmth)
     if (const UCurveFloat* Curve = GetConfig()->AdvancedModifierCurves.HungerDecayByTemperatureCurve)
@@ -373,7 +373,7 @@ float UNomadSurvivalNeedsComponent::ComputeColdHungerModifier(const float Normal
         // We want modifier (0.0 = no change, 0.5 = 50% increase)
         return Curve->GetFloatValue(NormalizedTempForCurve) - 1.f;
     }
-    
+
     // No modifier if curve is not configured
     return 0.f;
 }
@@ -382,7 +382,7 @@ float UNomadSurvivalNeedsComponent::ComputeHotThirstModifier(const float Normali
 {
     // Early exit if config is missing
     if (!GetConfig()) return 0.f;
-    
+
     // Use designer curve to determine thirst modifier based on temperature
     // Hot temperatures typically increase thirst (body loses more water through sweating)
     if (const UCurveFloat* Curve = GetConfig()->AdvancedModifierCurves.ThirstDecayByTemperatureCurve)
@@ -391,7 +391,7 @@ float UNomadSurvivalNeedsComponent::ComputeHotThirstModifier(const float Normali
         // We want modifier (0.0 = no change, 0.5 = 50% increase)
         return Curve->GetFloatValue(NormalizedTempForCurve) - 1.f;
     }
-    
+
     // No modifier if curve is not configured
     return 0.f;
 }
@@ -400,7 +400,7 @@ float UNomadSurvivalNeedsComponent::ComputeHungerActivityModifier(const float No
 {
     // Early exit if config is missing
     if (!GetConfig()) return 0.f;
-    
+
     // Use designer curve to determine hunger modifier based on activity level
     // Higher activity (running, sprinting) increases hunger due to energy expenditure
     if (const UCurveFloat* Curve = GetConfig()->AdvancedModifierCurves.HungerDecayByActivityCurve)
@@ -409,7 +409,7 @@ float UNomadSurvivalNeedsComponent::ComputeHungerActivityModifier(const float No
         // We want modifier (0.0 = no change, 1.0 = 100% increase)
         return Curve->GetFloatValue(NormalizedActivity) - 1.f;
     }
-    
+
     // No modifier if curve is not configured
     return 0.f;
 }
@@ -418,7 +418,7 @@ float UNomadSurvivalNeedsComponent::ComputeThirstActivityModifier(const float No
 {
     // Early exit if config is missing
     if (!GetConfig()) return 0.f;
-    
+
     // Use designer curve to determine thirst modifier based on activity level
     // Higher activity (running, sprinting) increases thirst due to increased respiration and sweating
     if (const UCurveFloat* Curve = GetConfig()->AdvancedModifierCurves.ThirstDecayByActivityCurve)
@@ -427,7 +427,7 @@ float UNomadSurvivalNeedsComponent::ComputeThirstActivityModifier(const float No
         // We want modifier (0.0 = no change, 1.0 = 100% increase)
         return Curve->GetFloatValue(NormalizedActivity) - 1.f;
     }
-    
+
     // No modifier if curve is not configured
     return 0.f;
 }
@@ -436,7 +436,7 @@ void UNomadSurvivalNeedsComponent::ApplyDecayToStats(const float InHungerDecay, 
 {
     // Early exit if required components are missing
     if (!StatisticsComponent || !GetConfig()) return;
-    
+
     // Apply negative values to reduce stats (decay)
     // FMath::Max ensures we never apply negative decay (which would heal the player)
     StatisticsComponent->ModifyStatistic(GetConfig()->GetHungerStatTag(), -FMath::Max(0.f, InHungerDecay));
@@ -453,7 +453,7 @@ void UNomadSurvivalNeedsComponent::EvaluateSurvivalStateTransitions(const FCache
     {
         // Apply status effect every tick while starving (effect should be non-stacking)
         ApplyGenericStatusEffect(GetConfig()->GetStarvationDebuffEffect(), GetConfig()->StarvationHealthDoTPercent);
-        
+
         // Fire transition event only once when entering starvation state
         if (!bIsStarving)
         {
@@ -478,7 +478,7 @@ void UNomadSurvivalNeedsComponent::EvaluateSurvivalStateTransitions(const FCache
     {
         // Apply status effect every tick while dehydrated (effect should be non-stacking)
         ApplyGenericStatusEffect(GetConfig()->GetDehydrationDebuffEffect(), GetConfig()->DehydrationHealthDoTPercent);
-        
+
         // Fire transition event only once when entering dehydration state
         if (!bIsDehydrated)
         {
@@ -509,14 +509,14 @@ void UNomadSurvivalNeedsComponent::EvaluateWeatherHazards(const FCachedStatValue
     // NOTE: Warning broadcasts for temperature hazards are now handled by
     // MaybeFireHeatstrokeWarning() and MaybeFireHypothermiaWarning()
     // This section only manages internal state flags for the warning system
-    
+
     // --- Heatstroke warning state management ---
     // Get threshold values from config for heatstroke warning zone calculation
     const float HeatstrokeThreshold = GetConfig()->GetHeatstrokeThreshold();
     const float HeatstrokeWarningDelta = GetConfig()->GetHeatstrokeWarningDelta();
-    
+
     // Check if player is in heatstroke warning zone (approaching but not yet at heatstroke)
-    if (CachedValues.BodyTemp >= HeatstrokeThreshold - HeatstrokeWarningDelta && 
+    if (CachedValues.BodyTemp >= HeatstrokeThreshold - HeatstrokeWarningDelta &&
         CachedValues.BodyTemp < HeatstrokeThreshold)
     {
         // Set warning flag when entering warning zone
@@ -536,9 +536,9 @@ void UNomadSurvivalNeedsComponent::EvaluateWeatherHazards(const FCachedStatValue
     // Get threshold values from config for hypothermia warning zone calculation
     const float HypothermiaThreshold = GetConfig()->GetHypothermiaThreshold();
     const float HypothermiaWarningDelta = GetConfig()->GetHypothermiaWarningDelta();
-    
+
     // Check if player is in hypothermia warning zone (approaching but not yet at hypothermia)
-    if (CachedValues.BodyTemp <= HypothermiaThreshold + HypothermiaWarningDelta && 
+    if (CachedValues.BodyTemp <= HypothermiaThreshold + HypothermiaWarningDelta &&
         CachedValues.BodyTemp > HypothermiaThreshold)
     {
         // Set warning flag when entering warning zone
@@ -561,30 +561,30 @@ void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTemp
     if (!StatisticsComponent || !GetConfig() || !CachedValues.bValid) return;
 
     // Log body temperature update for debugging temperature simulation
-    UE_LOG_SURVIVAL_TEMP(VeryVerbose, TEXT("Updating body temperature - Ambient: %.2f, Current: %.2f"), 
+    UE_LOG_SURVIVAL_TEMP(VeryVerbose, TEXT("Updating body temperature - Ambient: %.2f, Current: %.2f"),
                         AmbientTempCelsius, CachedValues.BodyTemp);
 
     const float CurrentBodyTemp = CachedValues.BodyTemp;
 
     // --- Safe Zone: If ambient temp is inside safe zone, body temp trends to normal ---
     // Safe zone represents comfortable environmental conditions where body can self-regulate
-    if (AmbientTempCelsius >= GetConfig()->GetSafeAmbientTempMinC() && 
+    if (AmbientTempCelsius >= GetConfig()->GetSafeAmbientTempMinC() &&
         AmbientTempCelsius <= GetConfig()->GetSafeAmbientTempMaxC())
     {
         // Calculate how far current body temp is from normal (37°C typically)
         const float TempDifference = GetConfig()->NormalBodyTemperature - CurrentBodyTemp;
-        
+
         // Apply proportional adjustment toward normal temperature
         const float ProportionalChange = TempDifference * GetConfig()->AdvancedBodyTempParams.BodyTempAdjustRate;
-        
+
         // Clamp change rate to prevent unrealistic temperature swings
-        float ClampedChange = FMath::Clamp(ProportionalChange, 
-            -GetConfig()->AdvancedBodyTempParams.MaxBodyTempChangeRate, 
+        float ClampedChange = FMath::Clamp(ProportionalChange,
+            -GetConfig()->AdvancedBodyTempParams.MaxBodyTempChangeRate,
             GetConfig()->AdvancedBodyTempParams.MaxBodyTempChangeRate);
 
         // Ensure minimum change rate if there's a significant difference
         // This prevents the system from getting "stuck" with tiny changes
-        if (FMath::Abs(ClampedChange) < GetConfig()->AdvancedBodyTempParams.MinBodyTempChangeRate && 
+        if (FMath::Abs(ClampedChange) < GetConfig()->AdvancedBodyTempParams.MinBodyTempChangeRate &&
             FMath::Abs(TempDifference) > KINDA_SMALL_NUMBER)
         {
             ClampedChange = FMath::Sign(TempDifference) * GetConfig()->AdvancedBodyTempParams.MinBodyTempChangeRate;
@@ -600,7 +600,7 @@ void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTemp
     {
         // --- Outside safe zone: Use curve for non-linear drift ---
         // When environment is too hot/cold, body temp drifts toward ambient temperature
-        
+
         // Get curve multiplier for non-linear temperature effects
         // Extreme temperatures have disproportionately large effects
         float CurveMultiplier = 1.f;
@@ -611,17 +611,17 @@ void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTemp
 
         // Calculate drift toward ambient temperature (not toward normal)
         const float TempDifference = AmbientTempCelsius - CurrentBodyTemp;
-        
+
         // Apply environmental drift with curve modification
         const float ProportionalChange = TempDifference * GetConfig()->AdvancedBodyTempParams.BodyTempAdjustRate * CurveMultiplier;
-        
+
         // Clamp change rate to prevent unrealistic temperature swings
-        float ClampedChange = FMath::Clamp(ProportionalChange, 
-            -GetConfig()->AdvancedBodyTempParams.MaxBodyTempChangeRate, 
+        float ClampedChange = FMath::Clamp(ProportionalChange,
+            -GetConfig()->AdvancedBodyTempParams.MaxBodyTempChangeRate,
             GetConfig()->AdvancedBodyTempParams.MaxBodyTempChangeRate);
 
         // Ensure minimum change rate if there's a significant difference
-        if (FMath::Abs(ClampedChange) < GetConfig()->AdvancedBodyTempParams.MinBodyTempChangeRate && 
+        if (FMath::Abs(ClampedChange) < GetConfig()->AdvancedBodyTempParams.MinBodyTempChangeRate &&
             FMath::Abs(TempDifference) > KINDA_SMALL_NUMBER)
         {
             ClampedChange = FMath::Sign(TempDifference) * GetConfig()->AdvancedBodyTempParams.MinBodyTempChangeRate;
@@ -643,7 +643,7 @@ void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTemp
     {
         // Increment exposure counter - heatstroke requires sustained exposure
         HeatExposureCounter++;
-        
+
         // Check if player has been in heatstroke zone long enough to trigger effect
         if (HeatExposureCounter >= GetConfig()->GetHeatstrokeDurationMinutes())
         {
@@ -676,7 +676,7 @@ void UNomadSurvivalNeedsComponent::UpdateBodyTemperature(const float AmbientTemp
     {
         // Increment exposure counter - hypothermia requires sustained exposure
         ColdExposureCounter++;
-        
+
         // Check if player has been in hypothermia zone long enough to trigger effect
         if (ColdExposureCounter >= GetConfig()->GetHypothermiaDurationMinutes())
         {
@@ -708,7 +708,7 @@ void UNomadSurvivalNeedsComponent::UpdateSurvivalUIState(const FCachedStatValues
 {
     // Early exit if cached values are invalid
     if (!CachedValues.bValid) return;
-    
+
     // Start with normal state as default
     ESurvivalState NewState = ESurvivalState::Normal;
 
@@ -728,14 +728,14 @@ void UNomadSurvivalNeedsComponent::UpdateSurvivalUIState(const FCachedStatValues
         NewState = ESurvivalState::Hungry;
     else if (IsThirsty(CachedValues.Thirst))
         NewState = ESurvivalState::Thirsty;
-    
+
     // Only broadcast state change if the state actually changed
     // This prevents unnecessary network traffic and event spam
     if (NewState != CurrentSurvivalState)
     {
         const ESurvivalState OldState = CurrentSurvivalState;
         CurrentSurvivalState = NewState; // Update replicated state for clients
-        
+
         // Broadcast state change event for UI systems and gameplay logic
         OnSurvivalStateChanged.Broadcast(OldState, NewState);
     }
@@ -768,7 +768,7 @@ void UNomadSurvivalNeedsComponent::EvaluateAndApplySurvivalEffects(const FCached
     // Get status effect manager for applying effects
     if (!StatusEffectManagerComponent)
     {
-        UE_LOG_SURVIVAL(Warning, TEXT("No StatusEffectManager found on %s - survival effects disabled"), 
+        UE_LOG_SURVIVAL(Warning, TEXT("No StatusEffectManager found on %s - survival effects disabled"),
                *GetOwner()->GetName());
         return;
     }
@@ -779,7 +779,7 @@ void UNomadSurvivalNeedsComponent::EvaluateAndApplySurvivalEffects(const FCached
 
     // Evaluate each survival condition and apply appropriate effects
     EvaluateHungerEffects(CachedValues.Hunger);
-    EvaluateThirstEffects(CachedValues.Thirst);  
+    EvaluateThirstEffects(CachedValues.Thirst);
     EvaluateTemperatureEffects(CachedValues.BodyTemp);
 }
 
@@ -793,7 +793,7 @@ void UNomadSurvivalNeedsComponent::EvaluateHungerEffects(float HungerLevel)
     {
         // Apply severe starvation effect with health damage over time
         ApplyStatusEffect(
-            Config->GetStarvationSevereEffectClass(), 
+            Config->GetStarvationSevereEffectClass(),
             ESurvivalSeverity::Severe,
             Config->StarvationHealthDoTPercent  // e.g., 0.005 for 0.5% per second
         );
@@ -822,7 +822,7 @@ void UNomadSurvivalNeedsComponent::EvaluateThirstEffects(float ThirstLevel)
         // Apply severe dehydration effect with health damage over time
         ApplyStatusEffect(
             Config->GetDehydrationSevereEffectClass(),
-            ESurvivalSeverity::Severe, 
+            ESurvivalSeverity::Severe,
             Config->DehydrationHealthDoTPercent  // e.g., 0.01 for 1% per second
         );
     }
@@ -927,7 +927,7 @@ void UNomadSurvivalNeedsComponent::ApplyStatusEffect(TSubclassOf<UNomadSurvivalS
         AppliedEffect->SetDoTPercent(DoTPercent);
 
         // Log successful application
-        UE_LOG_SURVIVAL(Log, TEXT("Applied survival effect %s with severity %s"), 
+        UE_LOG_SURVIVAL(Log, TEXT("Applied survival effect %s with severity %s"),
                *EffectClass->GetName(),
                *StaticEnum<ESurvivalSeverity>()->GetNameStringByValue((int64)Severity));
     }
@@ -947,7 +947,7 @@ void UNomadSurvivalNeedsComponent::RemoveAllSurvivalEffects()
     StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Dehydration"));
     StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Heatstroke"));
     StatusEffectManagerComponent->Nomad_RemoveStatusEffect(FGameplayTag::RequestGameplayTag("StatusEffect.Survival.Hypothermia"));
-    
+
     // Ensure movement speed is properly synced after removing all survival effects
     // This ensures any lingering movement modifiers are cleaned up
     ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
@@ -993,7 +993,7 @@ void UNomadSurvivalNeedsComponent::MaybeFireStarvationWarning(const float Curren
 {
     // Early exit if config is missing
     if (!GetConfig()) return;
-    
+
     // Check if player is in warning condition (hungry but not starving)
     // Warning threshold is typically higher than critical (0) threshold
     if (CurrentHunger > 0.f && CurrentHunger <= GetConfig()->GetStarvationWarningThreshold())
@@ -1004,13 +1004,13 @@ void UNomadSurvivalNeedsComponent::MaybeFireStarvationWarning(const float Curren
         {
             // Fire the Blueprint event first for gameplay systems that need raw hunger value
             OnStarvationWarning.Broadcast(CurrentHunger);
-            
+
             // Determine notification details based on escalation level
             // Higher warning counts get more urgent text and colors
             FString NotificationText;
             FLinearColor NotificationColor;
             float DisplayDuration;
-            
+
             switch (StarvationWarningCount)
             {
             case 1:
@@ -1033,12 +1033,12 @@ void UNomadSurvivalNeedsComponent::MaybeFireStarvationWarning(const float Curren
                 DisplayDuration = 5.0f;
                 break;
             }
-            
+
             // Broadcast notification to all listening systems (UI, audio, effects, etc.)
             BroadcastSurvivalNotification(NotificationText, NotificationColor, DisplayDuration);
-            
+
             // Log warning for debugging and analytics
-            UE_LOG_SURVIVAL_EVENTS(Log, TEXT("Starvation Warning #%d - Hunger: %.2f (Time: %.2f)"), 
+            UE_LOG_SURVIVAL_EVENTS(Log, TEXT("Starvation Warning #%d - Hunger: %.2f (Time: %.2f)"),
                                    StarvationWarningCount, CurrentHunger, CurrentInGameTime);
         }
     }
@@ -1055,7 +1055,7 @@ void UNomadSurvivalNeedsComponent::MaybeFireDehydrationWarning(const float Curre
 {
     // Early exit if config is missing
     if (!GetConfig()) return;
-    
+
     // Check if player is in warning condition (thirsty but not dehydrated)
     // Warning threshold is typically higher than critical (0) threshold
     if (CurrentThirst > 0.f && CurrentThirst <= GetConfig()->GetDehydrationWarningThreshold())
@@ -1066,13 +1066,13 @@ void UNomadSurvivalNeedsComponent::MaybeFireDehydrationWarning(const float Curre
         {
             // Fire the Blueprint event first for gameplay systems that need raw thirst value
             OnDehydrationWarning.Broadcast(CurrentThirst);
-            
+
             // Determine notification details based on escalation level
             // Higher warning counts get more urgent text and colors
             FString NotificationText;
             FLinearColor NotificationColor;
             float DisplayDuration;
-            
+
             switch (DehydrationWarningCount)
             {
                 case 1:
@@ -1095,12 +1095,12 @@ void UNomadSurvivalNeedsComponent::MaybeFireDehydrationWarning(const float Curre
                     DisplayDuration = 5.0f;
                     break;
             }
-            
+
             // Broadcast notification to all listening systems (UI, audio, effects, etc.)
             BroadcastSurvivalNotification(NotificationText, NotificationColor, DisplayDuration);
-            
+
             // Log warning for debugging and analytics
-            UE_LOG_SURVIVAL_EVENTS(Log, TEXT("Dehydration Warning #%d - Thirst: %.2f (Time: %.2f)"), 
+            UE_LOG_SURVIVAL_EVENTS(Log, TEXT("Dehydration Warning #%d - Thirst: %.2f (Time: %.2f)"),
                                    DehydrationWarningCount, CurrentThirst, CurrentInGameTime);
         }
     }
@@ -1117,13 +1117,13 @@ void UNomadSurvivalNeedsComponent::MaybeFireHeatstrokeWarning(const float Curren
 {
     // Early exit if config is missing
     if (!GetConfig()) return;
-    
+
     // Get threshold values for heatstroke warning zone calculation
     const float HeatstrokeThreshold = GetConfig()->GetHeatstrokeThreshold();
     const float HeatstrokeWarningDelta = GetConfig()->GetHeatstrokeWarningDelta();
-    
+
     // Check if player is in heatstroke warning zone (approaching but not yet at heatstroke)
-    if (InBodyTemperature >= HeatstrokeThreshold - HeatstrokeWarningDelta && 
+    if (InBodyTemperature >= HeatstrokeThreshold - HeatstrokeWarningDelta &&
         InBodyTemperature < HeatstrokeThreshold)
     {
         // Use escalating warning system to determine if warning should fire
@@ -1132,13 +1132,13 @@ void UNomadSurvivalNeedsComponent::MaybeFireHeatstrokeWarning(const float Curren
         {
             // Fire the Blueprint event first for gameplay systems that need raw temperature value
             OnHeatstrokeWarning.Broadcast(InBodyTemperature);
-            
+
             // Determine notification details based on escalation level
             // Temperature warnings escalate faster than hunger/thirst due to immediate danger
             FString NotificationText;
             FLinearColor NotificationColor;
             float DisplayDuration;
-            
+
             switch (HeatstrokeWarningCount)
             {
                 case 1:
@@ -1160,12 +1160,12 @@ void UNomadSurvivalNeedsComponent::MaybeFireHeatstrokeWarning(const float Curren
                     DisplayDuration = 6.0f;
                     break;
             }
-            
+
             // Broadcast notification to all listening systems (UI, audio, effects, etc.)
             BroadcastSurvivalNotification(NotificationText, NotificationColor, DisplayDuration);
-            
+
             // Log warning for debugging and analytics
-            UE_LOG_SURVIVAL_EVENTS(Log, TEXT("Heatstroke Warning #%d - Body Temp: %.2f (Time: %.2f)"), 
+            UE_LOG_SURVIVAL_EVENTS(Log, TEXT("Heatstroke Warning #%d - Body Temp: %.2f (Time: %.2f)"),
                                    HeatstrokeWarningCount, InBodyTemperature, CurrentInGameTime);
         }
     }
@@ -1182,13 +1182,13 @@ void UNomadSurvivalNeedsComponent::MaybeFireHypothermiaWarning(const float Curre
 {
     // Early exit if config is missing
     if (!GetConfig()) return;
-    
+
     // Get threshold values for hypothermia warning zone calculation
     const float HypothermiaThreshold = GetConfig()->GetHypothermiaThreshold();
     const float HypothermiaWarningDelta = GetConfig()->GetHypothermiaWarningDelta();
-    
+
     // Check if player is in hypothermia warning zone (approaching but not yet at hypothermia)
-    if (InBodyTemperature <= HypothermiaThreshold + HypothermiaWarningDelta && 
+    if (InBodyTemperature <= HypothermiaThreshold + HypothermiaWarningDelta &&
         InBodyTemperature > HypothermiaThreshold)
     {
         // Use escalating warning system to determine if warning should fire
@@ -1197,13 +1197,13 @@ void UNomadSurvivalNeedsComponent::MaybeFireHypothermiaWarning(const float Curre
         {
             // Fire the Blueprint event first for gameplay systems that need raw temperature value
             OnHypothermiaWarning.Broadcast(InBodyTemperature);
-            
+
             // Determine notification details based on escalation level
             // Cold warnings use blue color scheme transitioning to red for critical states
             FString NotificationText;
             FLinearColor NotificationColor;
             float DisplayDuration;
-            
+
             switch (HypothermiaWarningCount)
             {
                 case 1:
@@ -1225,12 +1225,12 @@ void UNomadSurvivalNeedsComponent::MaybeFireHypothermiaWarning(const float Curre
                     DisplayDuration = 6.0f;
                     break;
             }
-            
+
             // Broadcast notification to all listening systems (UI, audio, effects, etc.)
             BroadcastSurvivalNotification(NotificationText, NotificationColor, DisplayDuration);
-            
+
             // Log warning for debugging and analytics
-            UE_LOG_SURVIVAL_EVENTS(Log, TEXT("🥶 Hypothermia Warning #%d - Body Temp: %.2f (Time: %.2f)"), 
+            UE_LOG_SURVIVAL_EVENTS(Log, TEXT("🥶 Hypothermia Warning #%d - Body Temp: %.2f (Time: %.2f)"),
                                    HypothermiaWarningCount, InBodyTemperature, CurrentInGameTime);
         }
     }
@@ -1248,23 +1248,23 @@ bool UNomadSurvivalNeedsComponent::ShouldFireEscalatingWarning(const FString& Wa
     // Use pointer to avoid repeated string comparisons and switch statements
     // This is a minor performance optimization for frequently called function
     float* LastTime = nullptr;
-    
+
     // Map warning type string to corresponding time tracking variable
     if (WarningType == "Starvation")
         LastTime = &LastStarvationWarningTime;
-    else if (WarningType == "Dehydration")  
+    else if (WarningType == "Dehydration")
         LastTime = &LastDehydrationWarningTime;
     else if (WarningType == "Heatstroke")
         LastTime = &LastHeatstrokeWarningTime;
     else if (WarningType == "Hypothermia")
         LastTime = &LastHypothermiaWarningTime;
-    
+
     // Early exit if warning type is not recognized
     if (!LastTime) return false;
 
     // Calculate escalating cooldown - warnings get more frequent over time to build urgency
     float DynamicCooldown = BaseCooldown;
-    
+
     // After 3rd warning, warnings fire twice as frequently
     if (WarningCount >= 3)
     {
@@ -1275,7 +1275,7 @@ bool UNomadSurvivalNeedsComponent::ShouldFireEscalatingWarning(const FString& Wa
     {
         DynamicCooldown *= 0.5f; // 4x faster after 6th warning (0.5 * 0.5 = 0.25 of original)
     }
-    
+
     // Check if enough time has passed since last warning OR if this is the first warning
     if (*LastTime < 0.f || (CurrentTime - *LastTime) >= DynamicCooldown)
     {
@@ -1284,7 +1284,7 @@ bool UNomadSurvivalNeedsComponent::ShouldFireEscalatingWarning(const FString& Wa
         WarningCount++;
         return true; // Fire the warning
     }
-    
+
     // Not enough time has passed since last warning
     return false;
 }
@@ -1294,7 +1294,7 @@ void UNomadSurvivalNeedsComponent::BroadcastSurvivalNotification(const FString& 
     // Broadcast to all listening systems (UI widgets, audio managers, screen effect systems, etc.)
     // This unified notification system allows multiple systems to respond to the same survival event
     OnSurvivalNotification.Broadcast(NotificationText, Color, Duration);
-    
+
 #if !UE_BUILD_SHIPPING
     // Keep debug output for development builds only
     // This provides immediate visual feedback during development without affecting shipping performance
@@ -1312,7 +1312,7 @@ bool UNomadSurvivalNeedsComponent::IsStarving(const float CachedHunger) const
 {
     // Early exit if config is missing
     if (!GetConfig()) return false;
-    
+
     // Starvation occurs when hunger reaches or drops below 0
     // This is the most severe hunger state that triggers debuff effects
     return CachedHunger <= 0.f;
@@ -1322,7 +1322,7 @@ bool UNomadSurvivalNeedsComponent::IsHungry(const float CachedHunger) const
 {
     // Early exit if config is missing
     if (!GetConfig()) return false;
-    
+
     // Hungry state is when hunger is low but not yet at starvation level
     // This triggers warnings but not debuff effects
     return CachedHunger > 0.f && CachedHunger <= GetConfig()->GetStarvationWarningThreshold();
@@ -1332,7 +1332,7 @@ bool UNomadSurvivalNeedsComponent::IsDehydrated(const float CachedThirst) const
 {
     // Early exit if config is missing
     if (!GetConfig()) return false;
-    
+
     // Dehydration occurs when thirst reaches or drops below 0
     // This is the most severe thirst state that triggers debuff effects
     return CachedThirst <= 0.f;
@@ -1342,7 +1342,7 @@ bool UNomadSurvivalNeedsComponent::IsThirsty(const float CachedThirst) const
 {
     // Early exit if config is missing
     if (!GetConfig()) return false;
-    
+
     // Thirsty state is when thirst is low but not yet at dehydration level
     // This triggers warnings but not debuff effects
     return CachedThirst > 0.f && CachedThirst <= GetConfig()->GetDehydrationWarningThreshold();
@@ -1352,7 +1352,7 @@ bool UNomadSurvivalNeedsComponent::IsHeatstroke(const float CachedBodyTemp) cons
 {
     // Early exit if config is missing
     if (!GetConfig()) return false;
-    
+
     // Heatstroke occurs when body temperature reaches or exceeds the heatstroke threshold
     // This triggers immediate hazard state that can cause health damage
     return CachedBodyTemp >= GetConfig()->GetHeatstrokeThreshold();
@@ -1362,7 +1362,7 @@ bool UNomadSurvivalNeedsComponent::IsHypothermic(const float CachedBodyTemp) con
 {
     // Early exit if config is missing
     if (!GetConfig()) return false;
-    
+
     // Hypothermia occurs when body temperature reaches or drops below the hypothermia threshold
     // This triggers immediate hazard state that can cause movement penalties and health issues
     return CachedBodyTemp <= GetConfig()->GetHypothermiaThreshold();

@@ -14,7 +14,7 @@ class UNomadBaseStatusEffect;
  * UNomadInfiniteEffectConfig
  * --------------------------
  * Configuration for infinite duration status effects.
- * 
+ *
  * Key Features:
  * - Persistent until manually removed
  * - Optional periodic ticking
@@ -24,7 +24,7 @@ class UNomadBaseStatusEffect;
  * - Save/load persistence control
  * - Chain effect support
  * - Full hybrid system integration
- * 
+ *
  * Use Cases:
  * - Equipment bonuses
  * - Permanent curses/blessings
@@ -81,7 +81,7 @@ public:
 
     /** Persistent attribute modifiers applied for the effect's lifetime */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Persistent Modifiers", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="Attribute bonuses/penalties that last until effect removal"))
     FAttributesSetModifier PersistentAttributeModifier;
 
@@ -91,19 +91,19 @@ public:
 
     /** Stat modifications applied when effect is first activated */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="One-time stat changes when effect starts"))
     TArray<FStatisticValue> OnActivationStatModifications;
 
     /** Stat modifications applied on each periodic tick */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="bHasPeriodicTick && ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="bHasPeriodicTick && ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="Recurring stat changes on each tick"))
     TArray<FStatisticValue> OnTickStatModifications;
 
     /** Stat modifications applied when effect is deactivated */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stat Modifications", meta=(
-        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent", 
+        EditCondition="ApplicationMode != EStatusEffectApplicationMode::DamageEvent",
         EditConditionHides, ToolTip="Final stat changes when effect ends"))
     TArray<FStatisticValue> OnDeactivationStatModifications;
 

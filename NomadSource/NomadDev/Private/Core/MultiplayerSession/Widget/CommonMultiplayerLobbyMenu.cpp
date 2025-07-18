@@ -23,7 +23,7 @@ void UCommonMultiplayerLobbyMenu::NativeOnActivated()
 {
     Super::NativeOnActivated();
     // Optionally, add any activation-specific logic here (e.g., reset button states).
-    
+
 }
 
 void UCommonMultiplayerLobbyMenu::MenuSetup(bool bIsInLobby)

@@ -14,5 +14,5 @@ UCLASS()
 class NOMADDEV_API ANomadItem : public AACFItem
 {
 	GENERATED_BODY()
-    
+
 };

@@ -16,32 +16,32 @@ UNomadTimedEffectConfig::UNomadTimedEffectConfig()
     DurationMode = EEffectDurationMode::Duration;
     EffectDuration = 10.0f;
     NumTicks = 5;
-    
+
     // Initialize chain effects
     bTriggerActivationChainEffects = false;
     bTriggerDeactivationChainEffects = false;
     ActivationChainEffects.Empty();
     DeactivationChainEffects.Empty();
-    
+
     // Initialize stat modifications
     OnStartStatModifications.Empty();
     OnTickStatModifications.Empty();
     OnEndStatModifications.Empty();
     AttributeModifier = FAttributesSetModifier();
-    
+
     // Initialize advanced settings
     bCanBePaused = false;
     PauseTags = FGameplayTagContainer();
     bStackingRefreshesDuration = true;
-    
+
     // Timed effects often stack
     bCanStack = true;
     MaxStackSize = 5;
-    
+
     // Hybrid system defaults
     ApplicationMode = EStatusEffectApplicationMode::StatModification;
     DamageTypeClass = nullptr;
-    
+
     UE_LOG_AFFLICTION(VeryVerbose, TEXT("[CONFIG] Timed effect config constructed"));
 }
 
@@ -110,7 +110,7 @@ bool UNomadTimedEffectConfig::IsConfigValid() const
 TArray<FString> UNomadTimedEffectConfig::GetValidationErrors() const
 {
     TArray<FString> Errors;
-    
+
     // Get base validation errors
     Errors.Append(Super::GetValidationErrors());
 
@@ -146,7 +146,7 @@ TArray<FString> UNomadTimedEffectConfig::GetValidationErrors() const
         {
             Errors.Add(TEXT("Activation chain effects enabled but no effects specified"));
         }
-        
+
         for (int32 i = 0; i < ActivationChainEffects.Num(); i++)
         {
             if (ActivationChainEffects[i].IsNull())
@@ -162,7 +162,7 @@ TArray<FString> UNomadTimedEffectConfig::GetValidationErrors() const
         {
             Errors.Add(TEXT("Deactivation chain effects enabled but no effects specified"));
         }
-        
+
         for (int32 i = 0; i < DeactivationChainEffects.Num(); i++)
         {
             if (DeactivationChainEffects[i].IsNull())
@@ -345,7 +345,7 @@ EDataValidationResult UNomadTimedEffectConfig::IsDataValid(FDataValidationContex
 
     if (Result == EDataValidationResult::Valid)
     {
-        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Timed effect config validation passed: %s"), 
+        UE_LOG_AFFLICTION(Verbose, TEXT("[CONFIG] Timed effect config validation passed: %s"),
                           *EffectName.ToString());
     }
 

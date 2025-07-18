@@ -23,7 +23,7 @@ struct FAdvancedSurvivalTempParams
 {
     GENERATED_BODY()
 
-    /** 
+    /**
      * The minimum rate (°C/min) at which body temperature can change.
      * Prevents body temperature from "stalling" if the difference from ambient is very small.
      * Raise for more responsive simulation, lower for more gradual.
@@ -61,7 +61,7 @@ struct FAdvancedSurvivalTempParams
  * Centralized collection of all designer-tunable curves for advanced, non-linear survival effect tuning.
  * Use these to control how various gameplay modifiers (hunger/thirst decay, activity impact, temperature drift, etc.)
  * respond to normalized values. Each curve can be set in the editor for fine-grained balancing and unique gameplay feel.
- * 
+ *
  * - All curves are optional; fallback logic will be used if a curve is unset.
  * - See tooltips on each property for usage guidelines.
  */
@@ -75,7 +75,7 @@ struct FCurvesForAdvancedModifierTuning
     // [Curves for Advanced Modifier Tuning]
     // =========================
 
-    /** 
+    /**
      * Curve controlling how hunger decay scales with normalized temperature (0=coldest, 1=warmest).
      * X: Normalized temperature, Y: Multiplier for hunger decay.
      * Allows designers to tune non-linear effects of temperature on hunger.
@@ -83,7 +83,7 @@ struct FCurvesForAdvancedModifierTuning
     UPROPERTY(EditDefaultsOnly, Category="Survival|Curves")
     TObjectPtr<UCurveFloat> HungerDecayByTemperatureCurve;
 
-    /** 
+    /**
      * Curve controlling how thirst decay scales with normalized temperature (0=coldest, 1=warmest).
      * X: Normalized temperature, Y: Multiplier for thirst decay.
      * Allows designers to tune non-linear effects of temperature on thirst.
@@ -91,7 +91,7 @@ struct FCurvesForAdvancedModifierTuning
     UPROPERTY(EditDefaultsOnly, Category="Survival|Curves")
     TObjectPtr<UCurveFloat> ThirstDecayByTemperatureCurve;
 
-    /** 
+    /**
      * Curve controlling how hunger decay scales with normalized activity (0=idle, 1=sprinting).
      * X: Normalized activity, Y: Multiplier for hunger decay.
      * Allows designers to tune non-linear effects of activity on hunger.
@@ -99,7 +99,7 @@ struct FCurvesForAdvancedModifierTuning
     UPROPERTY(EditDefaultsOnly, Category="Survival|Curves")
     TObjectPtr<UCurveFloat> HungerDecayByActivityCurve;
 
-    /** 
+    /**
      * Curve controlling how thirst decay scales with normalized activity (0=idle, 1=sprinting).
      * X: Normalized activity, Y: Multiplier for thirst decay.
      * Allows designers to tune non-linear effects of activity on thirst.
@@ -114,7 +114,7 @@ struct FCurvesForAdvancedModifierTuning
  * Data Asset for all survival gameplay tuning parameters.
  * Designers edit these in editor; assign to character/component.
  * All variables are categorized and documented for clarity.
- * 
+ *
  * UPDATED (2025-07-17): Added new survival status effect class references for data-driven system
  */
 UCLASS(BlueprintType)
@@ -126,7 +126,7 @@ public:
     // [Decay Rates]
     // =========================
 
-    /** 
+    /**
      * How much hunger (stat units) the character loses in 24 in-game hours if idle in normal weather.
      * Divided by 1440 (minutes/day) for per-minute decay.
      * Raise for more survival challenge, lower for longer play sessions.
@@ -134,7 +134,7 @@ public:
     UPROPERTY(EditAnywhere, Category="Decay|Base", meta=(ClampMin="0"))
     float DailyHungerLoss = 50.f;
 
-    /** 
+    /**
      * How much thirst (stat units) the character loses in 24 in-game hours if idle in normal weather.
      * Divided by 1440 for per-minute decay.
      * Raise for more challenge, lower for longer play sessions.
@@ -142,7 +142,7 @@ public:
     UPROPERTY(EditAnywhere, Category="Decay|Base", meta=(ClampMin="0"))
     float DailyThirstLoss = 80.f;
 
-    /** 
+    /**
      * Multiplies all decay rates for accelerated testing.
      * Set to 60 for "one day per hour", 1 for normal.
      * Only use for debug/testing, not in shipped builds.
@@ -154,21 +154,21 @@ public:
     // [Activity Modifiers]
     // =========================
 
-    /** 
+    /**
      * Speed (cm/s) below which movement counts as walking.
      * Adjust to match your character's walk speed.
      */
     UPROPERTY(EditAnywhere, Category="Activity|Tiers", meta=(ClampMin="0"))
     float WalkingSpeedThreshold = 300.f;
 
-    /** 
+    /**
      * Speed (cm/s) below which movement counts as running.
      * Adjust to match your character's run speed.
      */
     UPROPERTY(EditAnywhere, Category="Activity|Tiers", meta=(ClampMin="0"))
     float RunningSpeedThreshold = 600.f;
 
-    /** 
+    /**
      * Speed (cm/s) above which movement counts as sprinting.
      * Adjust to match your character's sprint speed.
      */
@@ -179,7 +179,7 @@ public:
     // [Attribute Modifiers]
     // =========================
 
-    /** 
+    /**
      * Percentage reduction in decay per Endurance attribute point.
      * 0.01 = -1% per point. Raise for more impact of Endurance.
      */
@@ -471,7 +471,7 @@ public:
      */
     UPROPERTY(EditAnywhere, Category="Tags")
     FGameplayTag EnduranceStatTag;
-    
+
     // =========================
     // [Legacy Status Effects - KEEPING for compatibility]
     // =========================
@@ -587,7 +587,7 @@ public:
     UFUNCTION(BlueprintPure, Category="Decay|Base") float GetDailyHungerLoss() const { return DailyHungerLoss; }
     UFUNCTION(BlueprintPure, Category="Decay|Base") float GetDailyThirstLoss() const { return DailyThirstLoss; }
     UFUNCTION(BlueprintPure, Category="Decay|Debug") float GetDebugDecayMultiplier() const { return DebugDecayMultiplier; }
-    
+
     UFUNCTION(BlueprintPure, Category="Activity|Tiers") float GetWalkingSpeedThreshold() const { return WalkingSpeedThreshold; }
     UFUNCTION(BlueprintPure, Category="Activity|Tiers") float GetRunningSpeedThreshold() const { return RunningSpeedThreshold; }
     UFUNCTION(BlueprintPure, Category="Activity|Tiers") float GetSprintingSpeedThreshold() const { return SprintingSpeedThreshold; }
@@ -628,12 +628,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category="SideEffects|Thresholds") float GetHungerSlowThreshold() const { return HungerSlowThreshold; }
     UFUNCTION(BlueprintPure, Category="SideEffects|Thresholds") float GetThirstSlowThreshold() const { return ThirstSlowThreshold; }
-    
+
     UFUNCTION(BlueprintPure, Category="Warnings") float GetStarvationWarningThreshold() const { return StarvationWarningThreshold; }
     UFUNCTION(BlueprintPure, Category="Warnings") float GetDehydrationWarningThreshold() const { return DehydrationWarningThreshold; }
     UFUNCTION(BlueprintPure, Category="Warnings") float GetHeatstrokeWarningDelta() const { return HeatstrokeWarningDelta; }
     UFUNCTION(BlueprintPure, Category="Warnings") float GetHypothermiaWarningDelta() const { return HypothermiaWarningDelta; }
-    
+
     UFUNCTION(BlueprintPure, Category="Warnings|Cooldowns") float GetStarvationWarningCooldown() const { return StarvationWarningCooldown; }
     UFUNCTION(BlueprintPure, Category="Warnings|Cooldowns") float GetDehydrationWarningCooldown() const { return DehydrationWarningCooldown; }
     UFUNCTION(BlueprintPure, Category="Warnings|Cooldowns") float GetHeatstrokeWarningCooldown() const { return HeatstrokeWarningCooldown; }
@@ -650,7 +650,7 @@ public:
     UFUNCTION(BlueprintPure, Category="Tags") FGameplayTag GetHealthStatTag() const { return HealthStatTag; }
     UFUNCTION(BlueprintPure, Category="Tags") FGameplayTag GetBodyTempStatTag() const { return BodyTempStatTag; }
     UFUNCTION(BlueprintPure, Category="Tags") FGameplayTag GetEnduranceStatTag() const { return EnduranceStatTag; }
-    
+
     // Legacy getters
     UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetStarvationDebuffEffect() const { return StarvationDebuffEffect; }
     UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetDehydrationDebuffEffect() const { return DehydrationDebuffEffect; }
@@ -660,16 +660,16 @@ public:
     // =========================
     // [NEW: Status Effect Class Getters]
     // =========================
-    
+
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetStarvationMildEffectClass() const { return StarvationMildEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetStarvationSevereEffectClass() const { return StarvationSevereEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetDehydrationMildEffectClass() const { return DehydrationMildEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetDehydrationSevereEffectClass() const { return DehydrationSevereEffectClass; }
-    
+
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeMildEffectClass() const { return HeatstrokeMildEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeHeavyEffectClass() const { return HeatstrokeHeavyEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHeatstrokeExtremeEffectClass() const { return HeatstrokeExtremeEffectClass; }
-    
+
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaMildEffectClass() const { return HypothermiaMildEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaHeavyEffectClass() const { return HypothermiaHeavyEffectClass; }
     UFUNCTION(BlueprintPure, Category="Survival Status Effects") TSubclassOf<UNomadSurvivalStatusEffect> GetHypothermiaExtremeEffectClass() const { return HypothermiaExtremeEffectClass; }

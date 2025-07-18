@@ -9,7 +9,7 @@
 // Currently, no specific initialization is done in the constructor.
 ANomadRangedWeapon::ANomadRangedWeapon()
 {
-    
+
 }
 
 // BeginPlay is called when the game starts or the actor is spawned.
@@ -24,7 +24,7 @@ void ANomadRangedWeapon::InitializeItem()
 {
     // Ensure that RangedWeaponData is valid; if not, log an error.
      ensureMsgf(RangedWeaponData, TEXT("Ranged Weapon Data IS NOT SET!"));
-    
+
     // Proceed only if RangedWeaponData is valid.
     if (RangedWeaponData)
     {
@@ -64,7 +64,7 @@ void ANomadRangedWeapon::InitializeItem()
             UE_LOG(LogNomadRangedWeapon, Error, TEXT("ShootingComp is null! Check component setup."));
             return;
         }
-        
+
         // Configure the shooting component's visual shooting effect.
         ShootingComp->SetShootingEffect(Info.ShootingEffect);
         // Assign shooting type (e.g., projectile-based, hitscan).
@@ -210,7 +210,7 @@ void ANomadRangedWeapon::InitializeItem()
         {
             UE_LOG(LogNomadRangedWeapon, Warning, TEXT("UnequipSound is missing for ranged weapon: %s"), *RangedWeaponData->GetName());
         }
-        
+
         // Assign the gather sound if provided.
         if (Info.GatherSound)
         {
@@ -220,7 +220,7 @@ void ANomadRangedWeapon::InitializeItem()
         {
             UE_LOG(LogNomadRangedWeapon, Warning, TEXT("No GatherSound assigned for ranged weapon: %s"), *RangedWeaponData->GetName());
         }
-        
+
         // ---------------------------
         // Equipment Attribute Requirements
         // ---------------------------
@@ -233,10 +233,10 @@ void ANomadRangedWeapon::InitializeItem()
         {
             UE_LOG(LogNomadRangedWeapon, Warning, TEXT("PrimaryAttributesRequirement is empty for ranged weapon: %s"), *RangedWeaponData->GetName());
         }
-        
+
         // Set the attribute modifier that is applied when the weapon is equipped.
         AttributeModifier = Info.AttributeModifier;
-        
+
         // Check and assign the gameplay modifier applied when the weapon is equipped.
         if (Info.GameplayModifier)
         {
@@ -246,7 +246,7 @@ void ANomadRangedWeapon::InitializeItem()
         {
             UE_LOG(LogNomadRangedWeapon, Warning, TEXT("No GameplayModifier assigned for ranged weapon: %s"), *RangedWeaponData->GetName());
         }
-        
+
         // ---------------------------
         // Item Information
         // ---------------------------

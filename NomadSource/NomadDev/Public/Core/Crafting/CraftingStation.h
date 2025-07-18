@@ -32,10 +32,10 @@ public:
     virtual bool CanBeInteracted_Implementation(class APawn* Pawn) override;
 
 protected:
-    
+
     // Called when the actor is spawned or when the editor changes the actor's properties
     virtual void OnConstruction(const FTransform& Transform) override;
-    
+
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
     void UpdateMeshesAndMarker() const;
@@ -55,12 +55,12 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crafting Station")
     TObjectPtr<UNomadCraftingComponent> NomadCraftingComponent;
 
-    
+
     // Data asset: Contains the settings and properties for this crafting station.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crafting Station Data Asset")
     TObjectPtr<UCraftingStationData> CraftingStationData;
 
-    
-    
+
+
 
 };
