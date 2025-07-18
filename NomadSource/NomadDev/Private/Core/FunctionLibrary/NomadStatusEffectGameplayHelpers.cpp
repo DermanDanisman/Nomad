@@ -12,12 +12,7 @@
 #include "Core/StatusEffect/NomadBaseStatusEffect.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-void UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromStat(ACharacter* Character)
-{
-    // DEPRECATED: Wrapper for backward compatibility
-    // Syncs ARS "RPG.Attributes.MovementSpeed" to ACF movement component MaxWalkSpeed.
-    SyncMovementSpeedFromDefaultAttribute(Character);
-}
+
 
 void UNomadStatusEffectGameplayHelpers::SyncMovementSpeedFromAttribute(ACharacter* Character, const FGameplayTag& AttributeTag)
 {
@@ -71,56 +66,9 @@ bool UNomadStatusEffectGameplayHelpers::IsActionBlocked(ACharacter* Character, c
     return (SEManager && SEManager->HasBlockingTag(BlockingTag));
 }
 
-void UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedModifierToState(
-    UACFCharacterMovementComponent* MoveComp,
-    ELocomotionState State,
-    float Multiplier,
-    const FGuid& Guid)
-{
-    /**
-     * DEPRECATED: Applies a movement speed modifier to the given locomotion state.
-     * This method is kept for backward compatibility but should be replaced with status effects.
-     * - If a modifier with the same Guid exists, it is replaced.
-     * - Only applies if Multiplier != 1.0 (no change).
-     */
-    if (!MoveComp) return;
-    FACFLocomotionState* LocState = MoveComp->GetLocomotionStateStruct(State);
-    if (!LocState) return;
 
-    // Remove any previous mod with this Guid first
-    LocState->StateModifier.Guid = Guid;
-    LocState->StateModifier.AttributesMod.Empty();
 
-    if (FMath::Abs(Multiplier - 1.0f) > KINDA_SMALL_NUMBER)
-    {
-        LocState->StateModifier.AttributesMod.Add(
-            FAttributeModifier(
-                FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed")),
-                EModifierType::EMultiplicative,
-                Multiplier
-            )
-        );
-    }
-}
 
-void UNomadStatusEffectGameplayHelpers::RemoveMovementSpeedModifierFromState(
-    UACFCharacterMovementComponent* MoveComp,
-    ELocomotionState State,
-    const FGuid& Guid)
-{
-    /**
-     * DEPRECATED: Removes a movement speed modifier from the given locomotion state if the Guid matches.
-     * This method is kept for backward compatibility but should be replaced with status effects.
-     */
-    if (!MoveComp) return;
-    FACFLocomotionState* LocState = MoveComp->GetLocomotionStateStruct(State);
-    if (!LocState) return;
-
-    if (LocState->StateModifier.Guid == Guid)
-    {
-        LocState->StateModifier.AttributesMod.Empty();
-    }
-}
 
 void UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedStatusEffect(
     ACharacter* Character,
@@ -128,7 +76,7 @@ void UNomadStatusEffectGameplayHelpers::ApplyMovementSpeedStatusEffect(
     float Duration)
 {
     /**
-     * NEW: Applies a movement speed effect through the status effect system.
+     * Applies a movement speed effect through the status effect system.
      * This is the recommended approach for temporary movement speed modifications.
      */
     if (!Character || !StatusEffectClass) return;
@@ -157,7 +105,7 @@ void UNomadStatusEffectGameplayHelpers::RemoveMovementSpeedStatusEffect(
     const FGameplayTag& EffectTag)
 {
     /**
-     * NEW: Removes a movement speed effect by its gameplay tag.
+     * Removes a movement speed effect by its gameplay tag.
      */
     if (!Character || !EffectTag.IsValid()) return;
     
@@ -174,7 +122,7 @@ void UNomadStatusEffectGameplayHelpers::RemoveMovementSpeedStatusEffect(
 bool UNomadStatusEffectGameplayHelpers::HasActiveMovementSpeedEffects(ACharacter* Character)
 {
     /**
-     * NEW: Checks if any movement speed effects are currently active.
+     * Checks if any movement speed effects are currently active.
      */
     if (!Character) return false;
     
@@ -203,7 +151,7 @@ bool UNomadStatusEffectGameplayHelpers::HasActiveMovementSpeedEffects(ACharacter
 TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetActiveMovementSpeedEffectTags(ACharacter* Character)
 {
     /**
-     * NEW: Gets all active movement speed effect tags on the character.
+     * Gets all active movement speed effect tags on the character.
      */
     TArray<FGameplayTag> ActiveTags;
     
@@ -234,10 +182,10 @@ TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetActiveMovementSpeedEf
 TArray<FGameplayTag> UNomadStatusEffectGameplayHelpers::GetConfigurableMovementSpeedEffectTags()
 {
     /**
-     * NEW: Returns configurable movement speed effect tags.
+     * Returns configurable movement speed effect tags.
      * This replaces hardcoded tags with a data-driven approach.
      * 
-     * TODO: This could be moved to a config asset or game settings for runtime configuration.
+     * Note: This could be moved to a config asset or game settings for runtime configuration.
      */
     static TArray<FGameplayTag> ConfigurableTags;
     
@@ -269,15 +217,10 @@ void UNomadStatusEffectGameplayHelpers::ApplySurvivalMovementPenalty(
     /**
      * Helper method to apply standard survival movement penalty.
      * 
-     * NOTE: This method provides a simplified interface, but the recommended approach
+     * Note: This method provides a simplified interface, but the recommended approach
      * is to use UNomadSurvivalStatusEffect directly with appropriate config assets
      * that define PersistentAttributeModifier for movement speed changes and 
      * BlockingTags for input restrictions.
-     * 
-     * Example config setup:
-     * - PersistentAttributeModifier: Set movement speed multiplier (0.8 for 20% penalty)
-     * - BlockingTags: Include "Status.Block.Sprint" for severe penalties
-     * - EffectTag: Use "StatusEffect.Survival.MovementPenalty.Mild/Heavy/Severe"
      */
     if (!Character) return;
     
@@ -305,11 +248,9 @@ void UNomadStatusEffectGameplayHelpers::ApplySurvivalMovementPenalty(
             return; // No penalty for None severity
     }
     
-    // TODO: Apply survival status effect with the appropriate tag
-    // This requires creating config assets for each severity level with proper
-    // PersistentAttributeModifier values for movement speed reduction
-    // 
-    // Example: SEManager->ApplyInfiniteStatusEffect(UNomadSurvivalStatusEffect::StaticClass(), EffectTag);
+    // Note: This requires creating config assets for each severity level with proper
+    // PersistentAttributeModifier values for movement speed reduction.
+    // Implementation depends on available survival status effect classes.
 }
 
 void UNomadStatusEffectGameplayHelpers::RemoveSurvivalMovementPenalty(ACharacter* Character)

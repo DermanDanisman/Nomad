@@ -139,10 +139,10 @@ void ANomadWorldItem::StopPhysics()
 
 FText ANomadWorldItem::GetInteractableName_Implementation()
 {
-    return PickupItemData->GetPickupActorInfo().GetItemName();
+    return PickupItemData ? PickupItemData->GetPickupActorInfo().GetItemName() : FText::GetEmpty();
 }
 
 FGameplayTag ANomadWorldItem::GetCollectionTag_Implementation() const
 {
-    return PickupItemData->GetPickupActorInfo().GetCollectResourceTag();
+    return PickupItemData ? PickupItemData->GetPickupActorInfo().GetCollectResourceTag() : FGameplayTag();
 }

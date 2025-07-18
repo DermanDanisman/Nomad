@@ -131,37 +131,37 @@ void ANomadProjectile::InitializeItem()
 // Returns the thumbnail image for the projectile from the data asset.
 UTexture2D* ANomadProjectile::GetThumbnailImage() const
 {
-    return ProjectileData->ProjectileInfo.ItemInfo.ThumbNail;
+    return ProjectileData ? ProjectileData->ProjectileInfo.ItemInfo.ThumbNail : nullptr;
 }
 
 // Returns the item name from the projectile data.
 FText ANomadProjectile::GetItemName() const
 {
-    return ProjectileData->ProjectileInfo.ItemInfo.Name;
+    return ProjectileData ? ProjectileData->ProjectileInfo.ItemInfo.Name : FText::GetEmpty();
 }
 
 // Returns the item description from the projectile data.
 FText ANomadProjectile::GetItemDescription() const
 {
-    return ProjectileData->ProjectileInfo.ItemInfo.Description;
+    return ProjectileData ? ProjectileData->ProjectileInfo.ItemInfo.Description : FText::GetEmpty();
 }
 
 // Returns the item type (e.g., projectile) as defined in the projectile data.
 EItemType ANomadProjectile::GetItemType() const
 {
-    return ProjectileData->ProjectileInfo.ItemInfo.ItemType;
+    return ProjectileData ? ProjectileData->ProjectileInfo.ItemInfo.ItemType : EItemType::Default;
 }
 
 // Returns the complete item descriptor, containing all the projectile's details.
 FItemDescriptor ANomadProjectile::GetItemInfo() const
 {
-    return ProjectileData->ProjectileInfo.ItemInfo;
+    return ProjectileData ? ProjectileData->ProjectileInfo.ItemInfo : FItemDescriptor();
 }
 
 // Returns an array of gameplay tags representing possible item slots for this projectile.
 TArray<FGameplayTag> ANomadProjectile::GetPossibleItemSlots() const
 {
-    return ProjectileData->ProjectileInfo.ItemInfo.GetPossibleItemSlots();
+    return ProjectileData ? ProjectileData->ProjectileInfo.ItemInfo.GetPossibleItemSlots() : TArray<FGameplayTag>();
 }
 
 // ---------------------------

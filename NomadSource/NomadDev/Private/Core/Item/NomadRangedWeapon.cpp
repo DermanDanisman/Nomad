@@ -263,35 +263,35 @@ void ANomadRangedWeapon::InitializeItem()
 // Returns the thumbnail image for the ranged weapon (used in UI).
 UTexture2D* ANomadRangedWeapon::GetThumbnailImage() const
 {
-    return RangedWeaponData->RangedWeaponInfo.ItemInfo.ThumbNail;
+    return RangedWeaponData ? RangedWeaponData->RangedWeaponInfo.ItemInfo.ThumbNail : nullptr;
 }
 
 // Returns the item name as defined in the data asset.
 FText ANomadRangedWeapon::GetItemName() const
 {
-    return RangedWeaponData->RangedWeaponInfo.ItemInfo.Name;
+    return RangedWeaponData ? RangedWeaponData->RangedWeaponInfo.ItemInfo.Name : FText::GetEmpty();
 }
 
 // Returns the item description from the data asset.
 FText ANomadRangedWeapon::GetItemDescription() const
 {
-    return RangedWeaponData->RangedWeaponInfo.ItemInfo.Description;
+    return RangedWeaponData ? RangedWeaponData->RangedWeaponInfo.ItemInfo.Description : FText::GetEmpty();
 }
 
 // Returns the item type (e.g., ranged weapon).
 EItemType ANomadRangedWeapon::GetItemType() const
 {
-    return RangedWeaponData->RangedWeaponInfo.ItemInfo.ItemType;
+    return RangedWeaponData ? RangedWeaponData->RangedWeaponInfo.ItemInfo.ItemType : EItemType::Default;
 }
 
 // Returns the full item descriptor containing all item details.
 FItemDescriptor ANomadRangedWeapon::GetItemInfo() const
 {
-    return RangedWeaponData->RangedWeaponInfo.ItemInfo;
+    return RangedWeaponData ? RangedWeaponData->RangedWeaponInfo.ItemInfo : FItemDescriptor();
 }
 
 // Returns a list of possible item slots that this weapon can occupy.
 TArray<FGameplayTag> ANomadRangedWeapon::GetPossibleItemSlots() const
 {
-    return RangedWeaponData->RangedWeaponInfo.ItemInfo.GetPossibleItemSlots();
+    return RangedWeaponData ? RangedWeaponData->RangedWeaponInfo.ItemInfo.GetPossibleItemSlots() : TArray<FGameplayTag>();
 }

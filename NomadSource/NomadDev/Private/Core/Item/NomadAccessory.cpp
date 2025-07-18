@@ -109,36 +109,36 @@ void ANomadAccessory::InitializeItem()
 
 UTexture2D* ANomadAccessory::GetThumbnailImage() const
 {
-    // Return the thumbnail image from the item info.
-    return AccessoryData->EquipableItemInfo.ItemInfo.ThumbNail;
+    // Return the thumbnail image from the item info, checking if AccessoryData is valid.
+    return AccessoryData ? AccessoryData->EquipableItemInfo.ItemInfo.ThumbNail : nullptr;
 }
 
 FText ANomadAccessory::GetItemName() const
 {
-    // Return the name of the accessory from the item info.
-    return AccessoryData->EquipableItemInfo.ItemInfo.Name;
+    // Return the name of the accessory from the item info, checking if AccessoryData is valid.
+    return AccessoryData ? AccessoryData->EquipableItemInfo.ItemInfo.Name : FText::GetEmpty();
 }
 
 FText ANomadAccessory::GetItemDescription() const
 {
-    // Return the item description from the data asset.
-    return AccessoryData->EquipableItemInfo.ItemInfo.Description;
+    // Return the item description from the data asset, checking if AccessoryData is valid.
+    return AccessoryData ? AccessoryData->EquipableItemInfo.ItemInfo.Description : FText::GetEmpty();
 }
 
 EItemType ANomadAccessory::GetItemType() const
 {
-    // Return the type of the item (e.g., accessory) as defined in the item info.
-    return AccessoryData->EquipableItemInfo.ItemInfo.ItemType;
+    // Return the type of the item (e.g., accessory) as defined in the item info, checking if AccessoryData is valid.
+    return AccessoryData ? AccessoryData->EquipableItemInfo.ItemInfo.ItemType : EItemType::Default;
 }
 
 FItemDescriptor ANomadAccessory::GetItemInfo() const
 {
-    // Return the complete item descriptor from the data asset.
-    return AccessoryData->EquipableItemInfo.ItemInfo;
+    // Return the complete item descriptor from the data asset, checking if AccessoryData is valid.
+    return AccessoryData ? AccessoryData->EquipableItemInfo.ItemInfo : FItemDescriptor();
 }
 
 TArray<FGameplayTag> ANomadAccessory::GetPossibleItemSlots() const
 {
-    // Return an array of gameplay tags indicating the valid slots for this accessory.
-    return AccessoryData->EquipableItemInfo.ItemInfo.GetPossibleItemSlots();
+    // Return an array of gameplay tags indicating the valid slots for this accessory, checking if AccessoryData is valid.
+    return AccessoryData ? AccessoryData->EquipableItemInfo.ItemInfo.GetPossibleItemSlots() : TArray<FGameplayTag>();
 }

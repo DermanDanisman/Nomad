@@ -120,36 +120,36 @@ void ANomadArmor::InitializeItem()
 
 UTexture2D* ANomadArmor::GetThumbnailImage() const
 {
-    // Return the thumbnail image from the armor's item information.
-    return ArmorData->EquipableItemInfo.ItemInfo.ThumbNail;
+    // Return the thumbnail image from the armor's item information, checking if ArmorData is valid.
+    return ArmorData ? ArmorData->EquipableItemInfo.ItemInfo.ThumbNail : nullptr;
 }
 
 FText ANomadArmor::GetItemName() const
 {
-    // Return the display name of the armor from the data asset.
-    return ArmorData->EquipableItemInfo.ItemInfo.Name;
+    // Return the display name of the armor from the data asset, checking if ArmorData is valid.
+    return ArmorData ? ArmorData->EquipableItemInfo.ItemInfo.Name : FText::GetEmpty();
 }
 
 FText ANomadArmor::GetItemDescription() const
 {
-    // Return the item description from the data asset.
-    return ArmorData->EquipableItemInfo.ItemInfo.Description;
+    // Return the item description from the data asset, checking if ArmorData is valid.
+    return ArmorData ? ArmorData->EquipableItemInfo.ItemInfo.Description : FText::GetEmpty();
 }
 
 EItemType ANomadArmor::GetItemType() const
 {
-    // Return the item type (e.g., armor) as defined in the data asset.
-    return ArmorData->EquipableItemInfo.ItemInfo.ItemType;
+    // Return the item type (e.g., armor) as defined in the data asset, checking if ArmorData is valid.
+    return ArmorData ? ArmorData->EquipableItemInfo.ItemInfo.ItemType : EItemType::Default;
 }
 
 FItemDescriptor ANomadArmor::GetItemInfo() const
 {
-    // Return the complete item descriptor from the data asset.
-    return ArmorData->EquipableItemInfo.ItemInfo;
+    // Return the complete item descriptor from the data asset, checking if ArmorData is valid.
+    return ArmorData ? ArmorData->EquipableItemInfo.ItemInfo : FItemDescriptor();
 }
 
 TArray<FGameplayTag> ANomadArmor::GetPossibleItemSlots() const
 {
-    // Return an array of gameplay tags representing the valid equipment slots for this armor.
-    return ArmorData->EquipableItemInfo.ItemInfo.ItemSlots;
+    // Return an array of gameplay tags representing the valid equipment slots for this armor, checking if ArmorData is valid.
+    return ArmorData ? ArmorData->EquipableItemInfo.ItemInfo.ItemSlots : TArray<FGameplayTag>();
 }

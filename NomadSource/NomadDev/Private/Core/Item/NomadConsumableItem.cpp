@@ -146,36 +146,37 @@ void ANomadConsumableItem::InitializeItem()
 
 UTexture2D* ANomadConsumableItem::GetThumbnailImage() const
 {
-    // Return the thumbnail image defined in the item info.
-    return ConsumableItemData->ConsumableItemInfo.ItemInfo.ThumbNail;
+    // Return the thumbnail image defined in the item info, checking if ConsumableItemData is valid.
+    return ConsumableItemData ? ConsumableItemData->ConsumableItemInfo.ItemInfo.ThumbNail : nullptr;
 }
 
 FText ANomadConsumableItem::GetItemName() const
 {
     // Return the display name of the item from the data asset.
-    return ConsumableItemData->ConsumableItemInfo.ItemInfo.Name;
+    return ConsumableItemData ? ConsumableItemData->ConsumableItemInfo.ItemInfo.Name : FText::GetEmpty();
 }
 
 FText ANomadConsumableItem::GetItemDescription() const
 {
     // Return the description of the item from the data asset.
-    return ConsumableItemData->ConsumableItemInfo.ItemInfo.Description;
+    return ConsumableItemData ? ConsumableItemData->ConsumableItemInfo.ItemInfo.Description : FText::GetEmpty();
 }
 
 EItemType ANomadConsumableItem::GetItemType() const
 {
     // Return the item type (e.g., consumable) as defined in the data asset.
-    return ConsumableItemData->ConsumableItemInfo.ItemInfo.ItemType;
+    return ConsumableItemData ? ConsumableItemData->ConsumableItemInfo.ItemInfo.ItemType : EItemType::Default;
 }
 
 FItemDescriptor ANomadConsumableItem::GetItemInfo() const
 {
     // Return the complete item descriptor from the data asset.
-    return ConsumableItemData->ConsumableItemInfo.ItemInfo;
+    return ConsumableItemData ? ConsumableItemData->ConsumableItemInfo.ItemInfo : FItemDescriptor();
 }
 
 TArray<FGameplayTag> ANomadConsumableItem::GetPossibleItemSlots() const
 {
-    // Return an array of gameplay tags indicating the valid slots for this item.
-    return ConsumableItemData->ConsumableItemInfo.ItemInfo.GetPossibleItemSlots();
+    // Return an array of gameplay tags indicating the valid slots for this item, checking if ConsumableItemData is valid.
+    return ConsumableItemData ? ConsumableItemData->ConsumableItemInfo.ItemInfo.GetPossibleItemSlots() : TArray<FGameplayTag>();
+}
 }

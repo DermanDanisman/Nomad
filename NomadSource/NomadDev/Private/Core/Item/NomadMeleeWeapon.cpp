@@ -258,42 +258,42 @@ void ANomadMeleeWeapon::InitializeItem()
 
 UTexture2D* ANomadMeleeWeapon::GetThumbnailImage() const
 {
-    // Return the thumbnail image from the item info.
-    return MeleeWeaponData->MeleeWeaponInfo.ItemInfo.ThumbNail;
+    // Return the thumbnail image from the item info, checking if MeleeWeaponData is valid.
+    return MeleeWeaponData ? MeleeWeaponData->MeleeWeaponInfo.ItemInfo.ThumbNail : nullptr;
 }
 
 FText ANomadMeleeWeapon::GetItemName() const
 {
     // Return the item name from the item info.
-    return MeleeWeaponData->MeleeWeaponInfo.ItemInfo.Name;
+    return MeleeWeaponData ? MeleeWeaponData->MeleeWeaponInfo.ItemInfo.Name : FText::GetEmpty();
 }
 
 FText ANomadMeleeWeapon::GetItemDescription() const
 {
     // Return the item description from the item info.
-    return MeleeWeaponData->MeleeWeaponInfo.ItemInfo.Description;
+    return MeleeWeaponData ? MeleeWeaponData->MeleeWeaponInfo.ItemInfo.Description : FText::GetEmpty();
 }
 
 EItemType ANomadMeleeWeapon::GetItemType() const
 {
     // Return the item type (e.g., melee weapon) from the item info.
-    return MeleeWeaponData->MeleeWeaponInfo.ItemInfo.ItemType;
+    return MeleeWeaponData ? MeleeWeaponData->MeleeWeaponInfo.ItemInfo.ItemType : EItemType::Default;
 }
 
 FItemDescriptor ANomadMeleeWeapon::GetItemInfo() const
 {
     // Return the complete item descriptor from the item info.
-    return MeleeWeaponData->MeleeWeaponInfo.ItemInfo;
+    return MeleeWeaponData ? MeleeWeaponData->MeleeWeaponInfo.ItemInfo : FItemDescriptor();
 }
 
 TArray<FGameplayTag> ANomadMeleeWeapon::GetPossibleItemSlots() const
 {
-    // Return the list of possible equipment slot tags from the item info.
-    return MeleeWeaponData->MeleeWeaponInfo.ItemInfo.GetPossibleItemSlots();
+    // Return the list of possible equipment slot tags from the item info, checking if MeleeWeaponData is valid.
+    return MeleeWeaponData ? MeleeWeaponData->MeleeWeaponInfo.ItemInfo.GetPossibleItemSlots() : TArray<FGameplayTag>();
 }
 
 TArray<FGameplayTag> ANomadMeleeWeapon::GetRequiredToolTag() const
 {
-    // Return the list of required tool tags from the item.
-    return MeleeWeaponData->MeleeWeaponInfo.RequiredToolTag;
+    // Return the list of required tool tags from the item, checking if MeleeWeaponData is valid.
+    return MeleeWeaponData ? MeleeWeaponData->MeleeWeaponInfo.RequiredToolTag : TArray<FGameplayTag>();
 }
