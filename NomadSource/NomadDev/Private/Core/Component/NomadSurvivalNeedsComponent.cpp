@@ -443,17 +443,6 @@ void UNomadSurvivalNeedsComponent::ApplyDecayToStats(const float InHungerDecay, 
     StatisticsComponent->ModifyStatistic(GetConfig()->GetThirstStatTag(), -FMath::Max(0.f, InThirstDecay));
 }
 
-bool UNomadSurvivalNeedsComponent::ShouldSlowMovement(const FCachedStatValues& Values) const
-{
-    // Early exit if data is invalid or config is missing
-    if (!Values.bValid || !GetConfig()) return false;
-    
-    // Check if either hunger or thirst is low enough to warrant movement penalty
-    // Movement slowing occurs at warning thresholds, not just at critical (0) levels
-    return Values.Hunger <= GetConfig()->GetHungerSlowThreshold() || 
-           Values.Thirst <= GetConfig()->GetThirstSlowThreshold();
-}
-
 // ======== Event System Functions ========
 
 void UNomadSurvivalNeedsComponent::EvaluateSurvivalStateTransitions(const FCachedStatValues& CachedValues)

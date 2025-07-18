@@ -339,42 +339,6 @@ public:
     float HeatstrokeExtremeThreshold = 40.0f;
 
     /**
-     * Heatstroke mild movement speed multiplier (0.9 = 10% slow).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Heatstroke", meta=(ClampMin="0", ClampMax="1"))
-    float HeatstrokeMildSpeedMultiplier = 0.9f;
-
-    /**
-     * Heatstroke heavy movement speed multiplier (0.8 = 20% slow).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Heatstroke", meta=(ClampMin="0", ClampMax="1"))
-    float HeatstrokeHeavySpeedMultiplier = 0.8f;
-
-    /**
-     * Heatstroke extreme movement speed multiplier (0.7 = 30% slow).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Heatstroke", meta=(ClampMin="0", ClampMax="1"))
-    float HeatstrokeExtremeSpeedMultiplier = 0.7f;
-
-    /**
-     * Heatstroke mild stamina cap multiplier (0.9 = 10% reduction).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Heatstroke", meta=(ClampMin="0", ClampMax="1"))
-    float HeatstrokeMildStaminaMultiplier = 0.9f;
-
-    /**
-     * Heatstroke heavy stamina cap multiplier (0.8 = 20% reduction).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Heatstroke", meta=(ClampMin="0", ClampMax="1"))
-    float HeatstrokeHeavyStaminaMultiplier = 0.8f;
-
-    /**
-     * Heatstroke extreme stamina cap multiplier (0.7 = 30% reduction).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Heatstroke", meta=(ClampMin="0", ClampMax="1"))
-    float HeatstrokeExtremeStaminaMultiplier = 0.7f;
-
-    /**
      * Hypothermia Mild threshold (°C): Body temp at/below this value triggers mild hypothermia slow.
      */
     UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia")
@@ -392,42 +356,6 @@ public:
     UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia")
     float HypothermiaExtremeThreshold = 33.0f;
 
-    /**
-     * Hypothermia mild movement speed multiplier (0.9 = 10% slow).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia", meta=(ClampMin="0", ClampMax="1"))
-    float HypothermiaMildSpeedMultiplier = 0.9f;
-
-    /**
-     * Hypothermia heavy movement speed multiplier (0.8 = 20% slow).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia", meta=(ClampMin="0", ClampMax="1"))
-    float HypothermiaHeavySpeedMultiplier = 0.8f;
-
-    /**
-     * Hypothermia extreme movement speed multiplier (0.7 = 30% slow).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia", meta=(ClampMin="0", ClampMax="1"))
-    float HypothermiaExtremeSpeedMultiplier = 0.7f;
-
-    /**
-     * Hypothermia mild stamina cap multiplier (0.9 = 10% reduction).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia", meta=(ClampMin="0", ClampMax="1"))
-    float HypothermiaMildStaminaMultiplier = 0.9f;
-
-    /**
-     * Hypothermia heavy stamina cap multiplier (0.8 = 20% reduction).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia", meta=(ClampMin="0", ClampMax="1"))
-    float HypothermiaHeavyStaminaMultiplier = 0.8f;
-
-    /**
-     * Hypothermia extreme stamina cap multiplier (0.7 = 30% reduction).
-     */
-    UPROPERTY(EditAnywhere, Category="Hazards|Hypothermia", meta=(ClampMin="0", ClampMax="1"))
-    float HypothermiaExtremeStaminaMultiplier = 0.7f;
-
     // =========================
     // [Hunger/Thirst Side-Effects - LEGACY (keeping for existing system)]
     // =========================
@@ -440,39 +368,11 @@ public:
     float HungerSlowThreshold = 50.f;
 
     /**
-     * Movement speed multiplier when slowed by hunger (0 = stopped, 1 = unaffected).
-     * Lower for harsher penalty.
-     */
-    UPROPERTY(EditAnywhere, Category="SideEffects|Multipliers", meta=(ClampMin="0", ClampMax="1"))
-    float HungerSpeedMultiplier = 0.5f;
-
-    /**
-     * Stamina cap multiplier applied when Hunger is below slow threshold.
-     * 1.0 = no change, 0.8 = 80% cap, etc.
-     */
-    UPROPERTY(EditAnywhere, Category="SideEffects|Multipliers", meta=(ClampMin="0", ClampMax="1"))
-    float HungerStaminaCapMultiplier = 0.8f;
-
-    /**
      * Thirst at/below which movement slows and health may be lost.
      * Raise for more warning, lower for more risk.
      */
     UPROPERTY(EditAnywhere, Category="SideEffects|Thresholds", meta=(ClampMin="0"))
     float ThirstSlowThreshold = 50.f;
-
-    /**
-     * Movement speed multiplier when slowed by thirst (0 = stopped, 1 = unaffected).
-     * Lower for harsher penalty.
-     */
-    UPROPERTY(EditAnywhere, Category="SideEffects|Multipliers", meta=(ClampMin="0", ClampMax="1"))
-    float ThirstSpeedMultiplier = 0.5f;
-
-    /**
-     * Stamina cap multiplier applied when Thirst is below slow threshold.
-     * 1.0 = no change, 0.8 = 80% cap, etc.
-     */
-    UPROPERTY(EditAnywhere, Category="SideEffects|Multipliers", meta=(ClampMin="0", ClampMax="1"))
-    float ThirstStaminaCapMultiplier = 0.8f;
 
     // =========================
     // [Warning Thresholds]
@@ -721,30 +621,13 @@ public:
     UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeMildThreshold() const { return HeatstrokeMildThreshold; }
     UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeHeavyThreshold() const { return HeatstrokeHeavyThreshold; }
     UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeExtremeThreshold() const { return HeatstrokeExtremeThreshold; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeMildSpeedMultiplier() const { return HeatstrokeMildSpeedMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeHeavySpeedMultiplier() const { return HeatstrokeHeavySpeedMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeExtremeSpeedMultiplier() const { return HeatstrokeExtremeSpeedMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeMildStaminaMultiplier() const { return HeatstrokeMildStaminaMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeHeavyStaminaMultiplier() const { return HeatstrokeHeavyStaminaMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Heatstroke") float GetHeatstrokeExtremeStaminaMultiplier() const { return HeatstrokeExtremeStaminaMultiplier; }
 
     UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaMildThreshold() const { return HypothermiaMildThreshold; }
     UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaHeavyThreshold() const { return HypothermiaHeavyThreshold; }
     UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaExtremeThreshold() const { return HypothermiaExtremeThreshold; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaMildSpeedMultiplier() const { return HypothermiaMildSpeedMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaHeavySpeedMultiplier() const { return HypothermiaHeavySpeedMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaExtremeSpeedMultiplier() const { return HypothermiaExtremeSpeedMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaMildStaminaMultiplier() const { return HypothermiaMildStaminaMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaHeavyStaminaMultiplier() const { return HypothermiaHeavyStaminaMultiplier; }
-    UFUNCTION(BlueprintPure, Category="Hazards|Hypothermia") float GetHypothermiaExtremeStaminaMultiplier() const { return HypothermiaExtremeStaminaMultiplier; }
 
     UFUNCTION(BlueprintPure, Category="SideEffects|Thresholds") float GetHungerSlowThreshold() const { return HungerSlowThreshold; }
     UFUNCTION(BlueprintPure, Category="SideEffects|Thresholds") float GetThirstSlowThreshold() const { return ThirstSlowThreshold; }
-    
-    UFUNCTION(BlueprintPure, Category="SideEffects|Multipliers") float GetHungerStaminaCapMultiplier() const { return HungerStaminaCapMultiplier; }
-    UFUNCTION(BlueprintPure, Category="SideEffects|Multipliers") float GetHungerSpeedMultiplier() const { return HungerSpeedMultiplier; }
-    UFUNCTION(BlueprintPure, Category="SideEffects|Multipliers") float GetThirstSpeedMultiplier() const { return ThirstSpeedMultiplier; }
-    UFUNCTION(BlueprintPure, Category="SideEffects|Multipliers") float GetThirstStaminaCapMultiplier() const { return ThirstStaminaCapMultiplier; }
     
     UFUNCTION(BlueprintPure, Category="Warnings") float GetStarvationWarningThreshold() const { return StarvationWarningThreshold; }
     UFUNCTION(BlueprintPure, Category="Warnings") float GetDehydrationWarningThreshold() const { return DehydrationWarningThreshold; }
