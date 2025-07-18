@@ -7,7 +7,8 @@
 #include "NomadItem.generated.h"
 
 /**
- * 
+ * Base Nomad item class
+ * Extends ACF item functionality for Nomad-specific item behavior
  */
 UCLASS()
 class NOMADDEV_API ANomadItem : public AACFItem

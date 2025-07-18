@@ -8,7 +8,8 @@
 #include "NomadPickupItem.generated.h"
 
 /**
- * 
+ * Pickup item class for world-spawned collectible items
+ * Extends ACF pickup functionality with Nomad-specific configuration
  */
 UCLASS()
 class NOMADDEV_API ANomadPickupItem : public AACFPickup {

@@ -14,7 +14,8 @@ class UMultiplayerInterface : public UInterface
 };
 
 /**
- * 
+ * Interface for multiplayer-specific functionality
+ * Provides contract for objects that need multiplayer customization support
  */
 class NOMADDEV_API IMultiplayerInterface
 {

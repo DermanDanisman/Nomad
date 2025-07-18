@@ -48,7 +48,8 @@ struct FPlayerInfo {
 };
 
 /**
- * 
+ * Nomad player controller class
+ * Extends ACF companions player controller with multiplayer support and lobby functionality
  */
 UCLASS()
 class NOMADDEV_API ANomadPlayerController : public AACFCompanionsPlayerController, public IMultiplayerInterface

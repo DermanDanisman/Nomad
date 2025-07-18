@@ -8,7 +8,8 @@
 #include "GroupQuestAction.generated.h"
 
 /**
- * 
+ * Action class for handling group quest progression in the quest system
+ * Manages quest dependencies and objective activation
  */
 UCLASS()
 class NOMADDEV_API UGroupQuestAction : public UAGSAction
@@ -21,7 +22,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GroupQuest")
     FGameplayTag QuestTag;
 
-    /** Tag of the quest**/
+    /** Tag of the quest objective */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GroupQuest")
     FGameplayTag ObjectiveTag;
 

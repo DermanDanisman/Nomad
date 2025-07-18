@@ -8,7 +8,8 @@
 
 struct FPlayerInfo;
 /**
- * 
+ * Nomad game state class
+ * Manages multiplayer game state including player count and player information
  */
 UCLASS()
 class NOMADDEV_API ANomadGameState : public AACFGameState
