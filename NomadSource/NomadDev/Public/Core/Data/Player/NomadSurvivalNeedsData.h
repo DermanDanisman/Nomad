@@ -490,42 +490,6 @@ public:
     UPROPERTY(EditAnywhere, Category="Legacy|Status Effects", meta=(ClampMin="0.0", ClampMax="1.0"))
     float DehydrationHealthDoTPercent = 0.01f;
 
-    /** Status Effect applied when the player is starving (hunger depleted).
-     *  This effect should be a debuff such as stamina drain, vision blur, etc.
-     */
-    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
-    TSubclassOf<UNomadBaseStatusEffect> StarvationDebuffEffect;
-
-    /** Status Effect applied when the player is dehydrated (thirst depleted).
-     *  This effect should be a debuff such as health drain, stamina drain, etc.
-     */
-    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
-    TSubclassOf<UNomadBaseStatusEffect> DehydrationDebuffEffect;
-
-    /** Status Effect applied when the player is suffering from heatstroke (body temperature hazard).
-     *  This effect could be stamina drain, vision blur, overheating, etc.
-     */
-    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
-    TSubclassOf<UNomadBaseStatusEffect> HeatstrokeDebuffEffect;
-
-    /** Status Effect applied when the player is hypothermic (body temperature hazard).
-     *  This effect could be stamina drain, movement slow, frost effects, etc.
-     */
-    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
-    TSubclassOf<UNomadBaseStatusEffect> HypothermiaDebuffEffect;
-
-    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
-    FGameplayTag StarvationDebuffTag;
-
-    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
-    FGameplayTag DehydrationDebuffTag;
-
-    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
-    FGameplayTag HeatstrokeDebuffTag;
-
-    UPROPERTY(EditDefaultsOnly, Category="Legacy|Status Effects")
-    FGameplayTag HypothermiaDebuffTag;
-
     // =========================
     // [Hunger/Thirst Effect Thresholds]
     // =========================
@@ -690,12 +654,6 @@ public:
     UFUNCTION(BlueprintPure, Category="Tags") FGameplayTag GetHealthStatTag() const { return HealthStatTag; }
     UFUNCTION(BlueprintPure, Category="Tags") FGameplayTag GetBodyTempStatTag() const { return BodyTempStatTag; }
     UFUNCTION(BlueprintPure, Category="Tags") FGameplayTag GetEnduranceStatTag() const { return EnduranceStatTag; }
-    
-    // Legacy getters
-    UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetStarvationDebuffEffect() const { return StarvationDebuffEffect; }
-    UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetDehydrationDebuffEffect() const { return DehydrationDebuffEffect; }
-    UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetHeatstrokeDebuffEffect() const { return HeatstrokeDebuffEffect; }
-    UFUNCTION(BlueprintPure, Category="Legacy|Status Effects") TSubclassOf<UNomadBaseStatusEffect> GetHypothermiaDebuffEffect() const { return HypothermiaDebuffEffect; }
 
     // =========================
     // [NEW: Status Effect Class Getters]

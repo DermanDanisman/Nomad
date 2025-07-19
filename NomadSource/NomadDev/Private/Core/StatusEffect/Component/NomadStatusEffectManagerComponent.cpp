@@ -36,9 +36,6 @@ void UNomadStatusEffectManagerComponent::GetLifetimeReplicatedProps(TArray<FLife
 
     // Replicate active effects for client UI
     DOREPLIFETIME(UNomadStatusEffectManagerComponent, ActiveEffects);
-    
-    // Replicate blocking tags for client-side action validation
-    DOREPLIFETIME(UNomadStatusEffectManagerComponent, ActiveBlockingTags);
 }
 
 // =====================================================
@@ -59,39 +56,6 @@ void UNomadStatusEffectManagerComponent::OnRep_ActiveEffects()
             AfflictionComp->OnActiveEffectsChanged();
         }
     }
-}
-
-// =====================================================
-//         BLOCKING TAG SYSTEM
-// =====================================================
-
-void UNomadStatusEffectManagerComponent::AddBlockingTag(const FGameplayTag& Tag)
-{
-    if (!Tag.IsValid())
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Attempted to add invalid blocking tag"));
-        return;
-    }
-    
-    ActiveBlockingTags.AddTag(Tag); // Adds or increments stack count
-    UE_LOG_AFFLICTION(Verbose, TEXT("[MANAGER] Added blocking tag: %s"), *Tag.ToString());
-}
-
-void UNomadStatusEffectManagerComponent::RemoveBlockingTag(const FGameplayTag& Tag)
-{
-    if (!Tag.IsValid())
-    {
-        UE_LOG_AFFLICTION(Warning, TEXT("[MANAGER] Attempted to remove invalid blocking tag"));
-        return;
-    }
-    
-    ActiveBlockingTags.RemoveTag(Tag); // Removes or decrements stack count
-    UE_LOG_AFFLICTION(Verbose, TEXT("[MANAGER] Removed blocking tag: %s"), *Tag.ToString());
-}
-
-bool UNomadStatusEffectManagerComponent::HasBlockingTag(const FGameplayTag& Tag) const
-{
-    return ActiveBlockingTags.HasTag(Tag);
 }
 
 // =====================================================
@@ -203,6 +167,22 @@ void UNomadStatusEffectManagerComponent::ApplyInfiniteStatusEffect(TSubclassOf<U
     {
         UE_LOG_AFFLICTION(Error, TEXT("[MANAGER] Failed to create infinite status effect instance"));
     }
+}
+
+bool UNomadStatusEffectManagerComponent::ApplyEffectOnce(TSubclassOf<UNomadBaseStatusEffect> EffectClass)
+{
+    // Get effect tag from class
+    FGameplayTag EffectTag = GetEffectTagFromClass(EffectClass);
+    
+    // Check if already active  
+    if (FindActiveEffectIndexByTag(EffectTag)) {
+        UE_LOG(LogTemp, Warning, TEXT("Effect %s already active, skipping"), *EffectTag.ToString());
+        return false;
+    }
+    
+    // Apply normally
+    CreateAndApplyStatusEffect(EffectClass, nullptr);
+    return true;
 }
 
 // =====================================================

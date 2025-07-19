@@ -2,117 +2,108 @@
 
 #include "Core/StatusEffect/SurvivalHazard/NomadSurvivalStatusEffect.h"
 #include "ARSStatisticsComponent.h"
+#include "Components/ACFCharacterMovementComponent.h"
 #include "GameFramework/Character.h"
 #include "Core/Debug/NomadLogCategories.h"
 
-// =====================================================
-//         BASE SURVIVAL STATUS EFFECT
-// =====================================================
-
 UNomadSurvivalStatusEffect::UNomadSurvivalStatusEffect()
 {
-    // Survival effects are infinite duration - they persist until conditions improve
-    // They should be non-stacking since multiple severity levels don't make sense
     CurrentSeverity = ESurvivalSeverity::None;
     DoTPercent = 0.0f;
     LastDamageDealt = 0.0f;
+    bModifierApplied = false;
+    bBoundToARSDelegate = false;
 }
 
-void UNomadSurvivalStatusEffect::SetSeverityLevel(ESurvivalSeverity InSeverity)
-{
-    ESurvivalSeverity PreviousSeverity = CurrentSeverity;
-    CurrentSeverity = InSeverity;
-    
-    // Handle jump blocking based on severity changes
-    if (CharacterOwner)
-    {
-        // If transitioning to severe/extreme from mild/none, apply jump blocking
-        bool bWasSevere = (PreviousSeverity == ESurvivalSeverity::Severe || PreviousSeverity == ESurvivalSeverity::Extreme);
-        bool bIsSevere = (CurrentSeverity == ESurvivalSeverity::Severe || CurrentSeverity == ESurvivalSeverity::Extreme);
-        
-        if (!bWasSevere && bIsSevere)
-        {
-            // Apply jump blocking when transitioning to severe condition
-            ApplyJumpBlockTag(CharacterOwner);
-            UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Applied jump blocking due to severity increase to %s"), 
-                              *StaticEnum<ESurvivalSeverity>()->GetNameStringByValue((int64)CurrentSeverity));
-        }
-        else if (bWasSevere && !bIsSevere)
-        {
-            // Remove jump blocking when transitioning away from severe condition
-            RemoveJumpBlockTag(CharacterOwner);
-            UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Removed jump blocking due to severity decrease to %s"), 
-                              *StaticEnum<ESurvivalSeverity>()->GetNameStringByValue((int64)CurrentSeverity));
-        }
-        
-        // Always sync movement speed when severity changes as modifiers may change
-        SyncMovementSpeedModifier(CharacterOwner, 1.0f);
-    }
-}
-
-void UNomadSurvivalStatusEffect::SetDoTPercent(float InDoTPercent)
-{
-    DoTPercent = FMath::Max(0.0f, InDoTPercent); // Ensure non-negative
-}
+// === LIFECYCLE MANAGEMENT ===
 
 void UNomadSurvivalStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Character)
 {
-    // Call parent implementation first to handle base setup
     Super::OnStatusEffectStarts_Implementation(Character);
     
-    // Apply blocking tags for severe survival conditions
-    if (CurrentSeverity == ESurvivalSeverity::Severe || CurrentSeverity == ESurvivalSeverity::Extreme)
-    {
-        // Block jumping for severe survival conditions to prevent unrealistic mobility
-        ApplyJumpBlockTag(Character);
-        
-        UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Applied jump blocking for severe %s effect"), 
-                          *GetStatusEffectTag().ToString());
-    }
+    if (!Character) return;
     
-    // Sync movement speed modifiers to ensure proper application of movement penalties
-    // The actual speed modification is handled by the config-based attribute modifiers,
-    // but we need to sync the movement component to reflect the changes
-    SyncMovementSpeedModifier(Character, 1.0f); // Use 1.0f as multiplier since actual modifier comes from config
+    UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Starting survival effect on %s"), *Character->GetName());
     
-    // Apply visual effects appropriate for this survival condition
-    // This will be implemented in Blueprint for each specific effect type
+    // Bind to ARS delegate system for automatic synchronization
+    BindToARSDelegate();
+    
+    // Apply configuration modifiers (movement speed + stamina penalties)
+    ApplyConfigurationModifiers(Character);
+    
+    // Apply visual effects
     ApplyVisualEffects();
+    
+    UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Survival effect successfully started"));
 }
 
 void UNomadSurvivalStatusEffect::OnStatusEffectEnds_Implementation()
 {
-    // Remove blocking tags that were applied during effect start
-    if (CurrentSeverity == ESurvivalSeverity::Severe || CurrentSeverity == ESurvivalSeverity::Extreme)
+    UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Beginning survival effect removal and recovery"));
+    
+    // === STEP 1: REMOVE ATTRIBUTE MODIFIERS (RESTORES PENALTIES) ===
+    if (bModifierApplied && CharacterOwner)
     {
-        // Remove jump blocking when severe survival conditions end
-        RemoveJumpBlockTag(CharacterOwner);
-        
-        UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Removed jump blocking for ended %s effect"), 
-                          *GetStatusEffectTag().ToString());
+        UARSStatisticsComponent* StatsComp = CharacterOwner->FindComponentByClass<UARSStatisticsComponent>();
+        if (StatsComp)
+        {
+            // Get values BEFORE removal for logging
+            const FGameplayTag MovementTag = FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.MovementSpeed"));
+            const FGameplayTag EnduranceTag = FGameplayTag::RequestGameplayTag(TEXT("RPG.Attributes.Endurance"));
+            const FGameplayTag StaminaTag = FGameplayTag::RequestGameplayTag(TEXT("RPG.Statistics.Stamina"));
+            
+            float PenalizedMovement = StatsComp->GetCurrentAttributeValue(MovementTag);
+            float PenalizedEndurance = StatsComp->GetCurrentPrimaryAttributeValue(EnduranceTag);
+            float PenalizedStaminaMax = StatsComp->GetMaxValueForStatitstic(StaminaTag);
+            
+            // CRITICAL: Remove the modifier to restore normal values
+            StatsComp->RemoveAttributeSetModifier(AppliedModifier);
+            bModifierApplied = false;
+            
+            // Get values AFTER removal for verification
+            float RestoredMovement = StatsComp->GetCurrentAttributeValue(MovementTag);
+            float RestoredEndurance = StatsComp->GetCurrentPrimaryAttributeValue(EnduranceTag);
+            float RestoredStaminaMax = StatsComp->GetMaxValueForStatitstic(StaminaTag);
+            
+            UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] RECOVERY - Movement: %f -> %f"), 
+                              PenalizedMovement, RestoredMovement);
+            UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] RECOVERY - Endurance: %f -> %f"), 
+                              PenalizedEndurance, RestoredEndurance);
+            UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] RECOVERY - Stamina Max: %f -> %f"), 
+                              PenalizedStaminaMax, RestoredStaminaMax);
+            
+            UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Attribute modifiers removed - penalties recovered"));
+        }
+        else
+        {
+            UE_LOG_AFFLICTION(Error, TEXT("[SURVIVAL] Cannot recover - no ARS component found"));
+        }
+    }
+    else
+    {
+        UE_LOG_AFFLICTION(Warning, TEXT("[SURVIVAL] No modifiers to remove (already recovered or never applied)"));
     }
     
-    // Remove movement speed modifiers and sync to ensure proper cleanup
-    RemoveMovementSpeedModifier(CharacterOwner);
+    // === STEP 4: UNBIND FROM DELEGATES ===
+    UnbindFromARSDelegate();
     
-    // Remove visual effects before parent cleanup
+    // === STEP 5: REMOVE VISUAL EFFECTS ===
     RemoveVisualEffects();
     
-    // Call parent implementation to handle base cleanup
+    // === STEP 6: RESET INTERNAL STATE ===
+    CurrentSeverity = ESurvivalSeverity::None;
+    DoTPercent = 0.0f;
+    LastDamageDealt = 0.0f;
+    
+    // Call parent cleanup
     Super::OnStatusEffectEnds_Implementation();
+    
+    UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Complete recovery finished - all penalties removed"));
 }
 
 void UNomadSurvivalStatusEffect::HandleInfiniteTick()
 {
-    // Call parent implementation first (handles config-based stat modifications)
     Super::HandleInfiniteTick();
-    
-    // Ensure movement speed stays properly synced during long-running effects
-    // This helps maintain consistency in multiplayer and after other system changes
-    if (CharacterOwner)
-    {
-        SyncMovementSpeedModifier(CharacterOwner, 1.0f);
-    }
     
     // Apply damage over time if configured
     if (DoTPercent > 0.0f && CharacterOwner)
@@ -120,20 +111,111 @@ void UNomadSurvivalStatusEffect::HandleInfiniteTick()
         UARSStatisticsComponent* StatsComp = CharacterOwner->FindComponentByClass<UARSStatisticsComponent>();
         if (StatsComp)
         {
-            // Get current max health to calculate damage amount
             const FGameplayTag HealthTag = FGameplayTag::RequestGameplayTag(TEXT("RPG.Statistics.Health"));
             const float MaxHealth = StatsComp->GetMaxValueForStatitstic(HealthTag);
             
             if (MaxHealth > 0.0f)
             {
-                // Calculate damage: percentage of max health per tick
-                // DoTPercent is expected to be a small decimal (e.g., 0.005 for 0.5% per tick)
                 const float DamageAmount = MaxHealth * DoTPercent;
-                
-                // Apply damage (negative value reduces health)
                 StatsComp->ModifyStatistic(HealthTag, -DamageAmount);
                 LastDamageDealt = DamageAmount;
+                
+                UE_LOG_AFFLICTION(Verbose, TEXT("[SURVIVAL] Applied DoT damage: %f"), DamageAmount);
             }
         }
     }
+}
+
+// === CONFIGURATION APPLICATION ===
+
+void UNomadSurvivalStatusEffect::ApplyConfigurationModifiers(ACharacter* Character)
+{
+    if (!Character) return;
+    
+    const UNomadInfiniteEffectConfig* Config = GetEffectConfig();
+    if (!Config) 
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[SURVIVAL] No config found - cannot apply penalties"));
+        return;
+    }
+    
+    UARSStatisticsComponent* StatsComp = Character->FindComponentByClass<UARSStatisticsComponent>();
+    if (!StatsComp)
+    {
+        UE_LOG_AFFLICTION(Error, TEXT("[SURVIVAL] No ARS Statistics Component found"));
+        return;
+    }
+    
+    const FAttributesSetModifier& Modifier = Config->PersistentAttributeModifier;
+    
+    // Apply modifier to ARS (automatically replicates)
+    StatsComp->AddAttributeSetModifier(Modifier);
+    
+    // Store for removal later
+    AppliedModifier = Modifier;
+    bModifierApplied = true;
+    
+    UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Applied modifiers: %d attributes, %d primary, %d statistics"), 
+                      Modifier.AttributesMod.Num(), Modifier.PrimaryAttributesMod.Num(), Modifier.StatisticsMod.Num());
+}
+
+// === MULTIPLAYER-SAFE SYNCHRONIZATION ===
+
+void UNomadSurvivalStatusEffect::BindToARSDelegate()
+{
+    if (!CharacterOwner || bBoundToARSDelegate) return;
+    
+    UARSStatisticsComponent* StatsComp = CharacterOwner->FindComponentByClass<UARSStatisticsComponent>();
+    if (StatsComp)
+    {
+        // Always unbind first to prevent double binding
+        StatsComp->OnAttributeSetModified.RemoveDynamic(this, &UNomadSurvivalStatusEffect::OnAttributeSetChanged);
+        StatsComp->OnAttributeSetModified.AddDynamic(this, &UNomadSurvivalStatusEffect::OnAttributeSetChanged);
+        bBoundToARSDelegate = true;
+        
+        UE_LOG_AFFLICTION(Verbose, TEXT("[SURVIVAL] Bound to ARS delegate (with cleanup)"));
+    }
+}
+
+void UNomadSurvivalStatusEffect::UnbindFromARSDelegate()
+{
+    if (!CharacterOwner || !bBoundToARSDelegate) return;
+    
+    UARSStatisticsComponent* StatsComp = CharacterOwner->FindComponentByClass<UARSStatisticsComponent>();
+    if (StatsComp)
+    {
+        if (StatsComp->OnAttributeSetModified.IsAlreadyBound(this, &UNomadSurvivalStatusEffect::OnAttributeSetChanged))
+        {
+            StatsComp->OnAttributeSetModified.RemoveDynamic(this, &UNomadSurvivalStatusEffect::OnAttributeSetChanged);
+            bBoundToARSDelegate = false;
+            
+            UE_LOG_AFFLICTION(Verbose, TEXT("[SURVIVAL] Unbound from ARS delegate"));
+        }
+    }
+}
+
+void UNomadSurvivalStatusEffect::OnAttributeSetChanged()
+{
+    // This is called automatically whenever ARS attributes change
+    // It handles both server and client synchronization
+    if (!CharacterOwner) return;
+}
+
+// === UTILITY FUNCTIONS ===
+
+void UNomadSurvivalStatusEffect::SetSeverityLevel(ESurvivalSeverity InSeverity)
+{
+    ESurvivalSeverity PreviousSeverity = CurrentSeverity;
+    CurrentSeverity = InSeverity;
+    
+    if (CharacterOwner)
+    {
+        UE_LOG_AFFLICTION(Log, TEXT("[SURVIVAL] Severity changed: %d -> %d"), 
+                          (int32)PreviousSeverity, (int32)CurrentSeverity);
+    }
+}
+
+void UNomadSurvivalStatusEffect::SetDoTPercent(float InDoTPercent)
+{
+    DoTPercent = FMath::Max(0.0f, InDoTPercent);
 }

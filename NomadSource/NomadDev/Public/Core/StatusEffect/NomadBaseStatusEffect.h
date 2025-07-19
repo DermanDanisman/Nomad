@@ -160,43 +160,6 @@ public:
     /** Called to trigger standard activation logic (enables polymorphic activation). */
     virtual void Nomad_OnStatusEffectStarts(ACharacter* Character);
 
-    // =====================================================
-    //         BLOCKING TAG UTILITIES
-    // =====================================================
-
-    /** Applies a sprint blocking tag to prevent sprinting while this effect is active. */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
-    void ApplySprintBlockTag(ACharacter* Character);
-
-    /** Removes the sprint blocking tag when effect ends. */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
-    void RemoveSprintBlockTag(ACharacter* Character);
-
-    /** Applies a jump blocking tag to prevent jumping while this effect is active. */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
-    void ApplyJumpBlockTag(ACharacter* Character);
-
-    /** Removes the jump blocking tag when effect ends. */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Blocking")
-    void RemoveJumpBlockTag(ACharacter* Character);
-
-    /** Syncs movement speed modifiers but does not apply new modifiers.
-     * Use this method after modifying movement speed attributes externally.
-     * 
-     * Previous Approach: Hardcoded RPG.Attributes.MovementSpeed
-     * Current Approach: Config-driven gameplay tag approach.
-     */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Movement")
-    void SyncMovementSpeedModifier(ACharacter* Character, float Multiplier);
-
-    /** Removes movement speed modifier applied by this status effect. */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Movement")
-    void RemoveMovementSpeedModifier(ACharacter* Character);
-
-    /** Syncs movement speed from configured attribute modifiers to ACF movement component. */
-    UFUNCTION(BlueprintCallable, Category="Nomad Status Effect | Movement")
-    static void SyncMovementSpeedFromStatusEffects(ACharacter* Character);
-
 protected:
     // =====================================================
     //         ACF STATUS EFFECT OVERRIDES

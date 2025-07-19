@@ -136,9 +136,6 @@ void UNomadInstantStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* 
 
     // Hybrid system: apply stat/damage/both in a single call
     ApplyHybridEffect(StatMods, Character, Config);
-    
-    // Sync movement speed to reflect any instant changes to movement attributes
-    SyncMovementSpeedModifier(Character, 1.0f);
 
     // Trigger Blueprint and optional C++ event for VFX/SFX/UI notifications
     OnInstantEffectApplied_Implementation(StatMods);

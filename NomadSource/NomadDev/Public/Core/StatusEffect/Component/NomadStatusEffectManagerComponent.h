@@ -241,22 +241,6 @@ public:
     void ResetStatusEffectDamageTracking();
 
     // =====================================================
-    //         BLOCKING TAG SYSTEM
-    // =====================================================
-
-    /** Adds a blocking tag to prevent certain actions. */
-    UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Blocking")
-    void AddBlockingTag(const FGameplayTag& Tag);
-
-    /** Removes a blocking tag to restore certain actions. */
-    UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Blocking")
-    void RemoveBlockingTag(const FGameplayTag& Tag);
-
-    /** Checks if a specific action is currently blocked. */
-    UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Blocking")
-    bool HasBlockingTag(const FGameplayTag& Tag) const;
-
-    // =====================================================
     //         SPECIALIZED APPLICATION METHODS
     // =====================================================
 
@@ -282,6 +266,7 @@ public:
      */
     UFUNCTION(BlueprintCallable, Category="Nomad|Status Effect|Application")
     void ApplyInfiniteStatusEffect(TSubclassOf<UNomadBaseStatusEffect> StatusEffectClass);
+    bool ApplyEffectOnce(TSubclassOf<UNomadBaseStatusEffect> EffectClass);
 
 protected:
     // =====================================================
@@ -298,10 +283,6 @@ protected:
     /** Called on clients when ActiveEffects changes (used to update UI, VFX, etc.) */
     UFUNCTION()
     void OnRep_ActiveEffects();
-
-    /** Replicated container of active blocking tags. */
-    UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Status Effects")
-    FGameplayTagContainer ActiveBlockingTags;
 
     // =====================================================
     //         DAMAGE ANALYTICS DATA

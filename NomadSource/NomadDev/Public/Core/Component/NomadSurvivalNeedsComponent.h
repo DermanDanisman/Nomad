@@ -268,7 +268,7 @@ public:
     /**
      * Main tick function for survival simulation.
      * Called once per in-game minute by the time/weather system.
-     * @param TimeOfDay              Current in-game time (minutes since midnight, from UDS)
+     * @param TimeOfDay Current in-game time (minutes since midnight, from UDS)
      */
     UFUNCTION(BlueprintCallable, Category = "Survival|Tick")
     void OnMinuteTick(float TimeOfDay);
@@ -520,7 +520,6 @@ private:
 
     /** Updates and returns cached stat values to avoid redundant component calls */
     FCachedStatValues GetCachedStatValues() const;
-    void GetTemperatureMultipliersFromActiveEffects(float& OutHungerMultiplier, float& OutThirstMultiplier) const;
 
     // ======== Core Simulation Helpers ========
     
@@ -669,25 +668,6 @@ private:
      * Called when conditions improve or for cleanup during state transitions.
      */
     void RemoveAllSurvivalEffects();
-
-    // ======== Legacy Status Effect System (Compatibility) ========
-
-    /**
-     * LEGACY: Applies a generic status effect using the ACF status effect system.
-     * Used for compatibility with existing temperature hazard system.
-     * For new survival effects, use ApplyStatusEffect instead.
-     * @param InStatusEffectClass Status effect class to apply.
-     * @param InDoTPercent Damage over time percentage.
-     */
-    void ApplyGenericStatusEffect(const TSubclassOf<UNomadBaseStatusEffect>& InStatusEffectClass, float InDoTPercent) const;
-
-    /**
-     * LEGACY: Removes a status effect from the character by GameplayTag.
-     * Used for compatibility with existing temperature hazard system.
-     * For new survival effects, use RemoveAllSurvivalEffects instead.
-     * @param StatusEffectTag Gameplay tag of the effect to remove.
-     */
-    void TryRemoveStatusEffect(FGameplayTag StatusEffectTag) const;
 
     // ======== Warning System ========
 

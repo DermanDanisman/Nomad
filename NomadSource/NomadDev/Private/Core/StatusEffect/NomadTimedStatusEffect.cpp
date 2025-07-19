@@ -191,9 +191,6 @@ void UNomadTimedStatusEffect::OnStatusEffectStarts_Implementation(ACharacter* Ch
     {
         ApplyAttributeSetModifier();
     }
-    
-    // Sync movement speed modifiers to ensure proper application of movement changes
-    SyncMovementSpeedModifier(Character, 1.0f);
 
     // Trigger Blueprint event
     OnTimedEffectStarted(Character);
@@ -232,9 +229,6 @@ void UNomadTimedStatusEffect::OnStatusEffectEnds_Implementation()
         {
             RemoveAttributeSetModifier();
         }
-        
-        // Remove movement speed modifiers and sync to ensure proper cleanup
-        RemoveMovementSpeedModifier(CharacterOwner);
         
         // Trigger chain effects if configured
         if (Config->bTriggerDeactivationChainEffects && Config->DeactivationChainEffects.Num() > 0)

@@ -67,6 +67,22 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category="Survival Effect") 
     float DoTPercent = 0.0f;
 
+    // === MULTIPLAYER SYNCHRONIZATION MEMBERS ===
+
+    /** Stores the applied modifier for proper removal */
+    UPROPERTY()
+    FAttributesSetModifier AppliedModifier;
+    
+    /** Tracks whether we've applied a modifier that needs removal */
+    UPROPERTY()
+    bool bModifierApplied = false;
+
+    /** Tracks if we're bound to ARS delegate to prevent double binding */
+    UPROPERTY()
+    bool bBoundToARSDelegate = false;
+
+    // === LIFECYCLE OVERRIDES ===
+
     /** 
      * Called when the survival effect starts.
      * Applies attribute modifiers and visual effects based on severity.
@@ -85,6 +101,16 @@ protected:
      */
     virtual void HandleInfiniteTick() override;
 
+    // === MULTIPLAYER-SAFE SYNC SYSTEM ===
+    
+    /**
+     * Called automatically when ARS attribute set is modified.
+     * Ensures movement speed stays synchronized with attribute changes.
+     * Handles both server and client synchronization.
+     */
+    UFUNCTION()
+    void OnAttributeSetChanged();
+
     /**
      * Applies visual effects appropriate for the current severity level.
      * Override in subclasses for effect-specific visuals (screen tints, particles, etc.).
@@ -100,7 +126,17 @@ protected:
     void RemoveVisualEffects();
 
 private:
-    /** Tracks last damage dealt for analytics and UI feedback */
+    // === INTERNAL SYNC FUNCTIONS ===
+    
+    /** Applies the PersistentAttributeModifier from config to ARS */
+    void ApplyConfigurationModifiers(ACharacter* Character);
+
+    /** Binds to ARS delegate for automatic synchronization */
+    void BindToARSDelegate();
+    
+    /** Unbinds from ARS delegate during cleanup */
+    void UnbindFromARSDelegate();
+    
     float LastDamageDealt = 0.0f;
 };
 
